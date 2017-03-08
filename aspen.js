@@ -1,3 +1,6 @@
+//DELAY = 500;
+DELAY = 5000;
+
 console.log('Hello world - I injected javascript!');
 //$('body').prepend('HELLO WORLD');
 
@@ -41,6 +44,7 @@ function getValueSetter (lab,val) {
     var valueWidgets = $nextCell.find('input')
     var w = valueWidgets[0]
     gft[lab] = valueWidgets
+    waitTime = 500;
     return DelayedAction(
 	function () {
 	    console.log('Setting widget %s to %s (%s)',w,val,lab);
@@ -73,7 +77,8 @@ function getValueSetter (lab,val) {
 	    if (timer) {
 		// if we're using a timer...
 		elapsed = new Date().getTime() - timer
-		if (elapsed > 500) {
+		if (elapsed > waitTime) {
+		    console.log('After I waited %s, moving on',waitTime);
 		    return true
 		}
 		else {
@@ -82,14 +87,14 @@ function getValueSetter (lab,val) {
 	    }
 	    if (valueWidgets.length > 1 && doExtraCheck) {
 		newVals = valueWidgets.map(function () {return this.value}).slice(1)
-		console.log('Had %s, got %s',
-			    origVals.toArray().toString(),
-			    newVals.toArray().toString());
 		if (newVals.toArray().toString()!=origVals.toArray().toString()) {
-		    console.log('Updated!')
+		    console.log('Updated %s to %s!',origVals.toArray().toString(),newVals.toArray().toString())
 		    timer = new Date().getTime()
+		    waitTime = 500;
 		}
 		else {
+		    timer = new Date().getTime();
+		    waitTime = 2000; // extra time if we had an issue... 2 seconds max
 		    return false
 		}
 	    }
@@ -107,7 +112,7 @@ function spawnWaiter (url, onComplete) {
 	     waitlist:[{'url':url}]},
 	    function (r) {
 		if (r) {onComplete()}
-		else {setTimeout(waiter,500)}
+		else {setTimeout(waiter,DELAY)}
 	    }
 	);
     }
@@ -120,7 +125,7 @@ function setTable (data) {
 	console.log('cat',cat,':',data[cat])
 	actions.push(getValueSetter(cat,data[cat]));
     }
-    actions.push(Action(doSave,function () {return true}));
+    actions.push(DelayedAction(doSave,function () {return true}));
     loopThroughActions(actions);
 }
 
@@ -138,8 +143,15 @@ function testTable () {
 }
 
 function doSave () {
+    console.log('do save!');
     $('#saveButton').click()
 }
+
+function doSaveAndNew () {
+    console.log('Save and New!');
+    $('#saveAndNewButton').click()
+}
+
 
 function testTableSet () {
     setValue('Category','WH');
@@ -273,8 +285,6 @@ function TableObject (data) {
 		    // spawnWaiter kicks it to the backend to see when this is done...
 		    spawnWaiter(onclickUrl,function () {
 			console.log('Sleep before we finish -- 3s');
-			//delayedAction(
-			//function () {}
 			// Use delayed action to set up a listener to only continue after the
 			// image icon has updated :(
 			loopThroughActions(
@@ -320,7 +330,7 @@ function TableObject (data) {
 		chrome.runtime.sendMessage(
 		    {'mode':'register',
 		     'url':onclickUrl,
-		     'action':{'main':commentContent,'private':comemntContent,'name':'comment'}
+		     'action':{'main':commentContent,'private':commentContent,'name':'comment'}
 		    },
 		     function () { // callback for registering comment
 			 $(curcell).find('img').click();
@@ -425,6 +435,62 @@ function writeText (t) {
     $('body')[0].dispatchEvent(new MouseEvent("click"));
 }
 
+//
+// Form filling out functions...
+//
+
+function clickOptionsAction (actionName) {
+    $('.menuOption:contains("'+actionName+'")').click()
+}
+
+function addAssignmentsFromAssignmentsTab (assignmentsData) {
+    var firstOne = true;
+    for (const assignment of assignmentsData) {
+	// we register all the actions :)
+	chrome.runtime.sendMessage({
+	    'mode':'register',
+	    'url':firstOne ? 'addRecord.do' : 'assignmentDetail.do',
+	    'action':{'name':'createAssignment',
+		      'assignment':assignment}
+	})
+	firstOne = false;
+    }
+    // then we click add
+    clickOptionsAction('Add Assignment'); // and then we click Add :)
+}
+
+function getFillOutAssignmentActions (data) {
+    actionList = []
+    //actionList.push(DelayedTimerAction(function () {clickOptionsAction('Add')},500));
+    for (var label in data) {
+	if (data[label]) {
+	    actionList.push(getValueSetter(label,data[label]))
+	}
+    }
+    actionList.push(
+	DelayedTimerAction(doSaveAndNew,500)
+    );
+    return actionList
+}
+
+
+function testFillOutAssignment () {
+    actions = getFillOutAssignmentActions(	    {		'Category':'WH','GB column name':'Test GB','Assignment name':'Test-1','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':8,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'});
+    loopThroughActions(actions)
+}
+
+function testAddAssignments () {
+    addAssignmentsFromAssignmentsTab(
+	[
+	    {		'Category':'WH','GB column name':'Test GB','Assignment name':'Test-1','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':8,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'},
+	    {		'Category':'WH','GB column name':'Test GB-2','Assignment name':'Test-2','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':10,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'},
+	    {		'Category':'WH','GB column name':'Test GB-3','Assignment name':'Test-3','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':12,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'},
+	]
+    );
+}
+
+
+
 // Navigation functions for X2...
 function topTabAction (tabName) {
     var $el = $("#header a:contains('"+tabName+"')")
@@ -515,32 +581,63 @@ function UserInterface () {
     // URL MAPPING
 
     self.urls = [
+	[/.*/, function () {
+	    b1 = Button('Retry-Action',function () {
+		chrome.runtime.sendMessage({
+		    mode:'retry',
+		    url:document.URL,
+		});
+	    });
+	    b2 = Button('Skip Action',function () {
+		chrome.runtime.sendMessage({
+		    mode:'skip',
+		    url:document.URL
+		})
+	    }); // end button 2
+	    $td = $('<td>')
+	    $td.append(b1); $td.append(b2);
+	    $('#contextMenu').parent().before($td);
+	}],
 	[/assignmentList.do/,function () {
 	    handleFiles = function (files) {
-		console.log('got files: %s',files);
-		var file = files[0]
-		var reader = new FileReader();
-		reader.onload = function (e) {
-		    var input = e.target.result
-		    csvObj = $.csv.toObjects(input); // GLOBAL for debugging :)
-		    console.log('Got CSV OBJ %s!',csvObj);
-		}
-		reader.readAsText(file);
 	    };
 	    addToOptionBar(
 		Button('Import Assignments', function () {
 		    console.log('Add Assignment');
 		    $popup = makePopup();
-		    function handleFiles = function (files) {
-			// Once we get file...
-			
-			
-		    }
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
 		    $input.change(function () {handleFiles(this.files)});
+		    var fields = ['Category','GB column name','Assignment name','Date assigned','Date due','Total points','Extra credit points','Grade Scale','Grade Term']
+		    handler = csvFileHandler(
+			$input,
+			fields,
+			'Import Assignments',
+			function (csvObj,doMap) {
+			    console.log('Got data!')
+			    csvObj = csvObj
+			    doMap = doMap
+			    var assignments = []
+			    for (var csvrow of csvObj) {
+				var assignment = {}
+				for (var f of fields) {
+				    val = doMap(csvrow,f)
+				    if (val) {
+					assignment[f] = val;
+				    }
+				    else {
+					console.log('No value for %s',f);
+				    }
+				}
+				assignments.push(assignment);
+			    }
+			    console.log('Pushing assignments: %s',assignments);
+			    addAssignmentsFromAssignmentsTab(assignments);
+			}
+		    );
 		    $popup.buttonbar.prepend($input);
+		    $popup.buttonbar.append(handler.$buttonArea);
 		    $popup.body.append(
-			$('<p>Select a CSV file to import assignments from. The headers should be as follows...</p>')
+			handler.$ui
 		    );
 		}
 		      )
@@ -552,63 +649,32 @@ function UserInterface () {
 		    console.log('Show import grades UI');
 		    $popup = makePopup();
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
-		    handler = csvFileHandler({
-			$input:$input,
-			fields:['Student Name','Assignment Name','Grade','Comment'],
-					    );
+		    handler = csvFileHandler(
+			$input, // the element,
+			['Student Name','Assignment Name','Grade','Comment'], // the fields
+			'Import Grades', // the action name,
+			function (csvObj, doMap) { // the callback
+			    console.log('Got CSV Data: ',csvObj);
+			    mytable = TableObject(getAssignmentsFromGradebook());
+			    actions = []
+			    for (var csvrow of csvObj) {
+				actions.push(
+				    mytable.setCellDelayed(
+					doMap(csvrow,'Student Name'),
+					doMap(csvrow,'Assignment Name'),
+					doMap(csvrow,'Grade'),
+					doMap(csvrow,'Comment')
+				    )
+				);
+			    }
+			    $popup.hide();
+			    console.log('Here we go!');
+			    loopThroughActions(actions);
+			}
+		    ); // end handler creation :)
 		    $popup.buttonbar.prepend($input);
-		    var mapper
-		    handleFiles = function (files) {
-			console.log('got files: %s',files);
-			var file = files[0]
-			var reader = new FileReader();
-			reader.onload = function (e) {
-			    var input = e.target.result
-			    csvObj = $.csv.toObjects(input); // GLOBAL for debugging :)
-			    console.log('Got CSV OBJ %s!',csvObj);
-			    $popup.body.append($("<p>Got data!</p>"));
-			    var fields = [];
-			    for (var field in csvObj[0]) {fields.push(field)};
-			    mapper = makeCSVMapper(['Student Name','Assignment Name','Grade','Comment'],fields) // global
-			    // Now we need to pick...
-			    $body.append(mapper.$div);
-			    mapper.finishUI();
-
-			    // Button for actual import...
-			    $popup.buttonbar.append(Button(
-				actionLabel
-				function () {
-				    var doMap = mapper.getMapper()
-				    //console.log('Got mapping data: %s',map);
-				    console.log('Got CSV Data: ',csvObj);
-				    mytable = TableObject(getAssignmentsFromGradebook());
-				    actions = []
-				    for (var csvrow of csvObj) {
-					// console.log('Pushing to actions');
-					// console.log(csvrow[map['Student Name']])
-					// console.log(csvrow[map['Assignment Name']])
-					// console.log(csvrow[map['Grade']])
-					// console.log(csvrow[map['Comment']])
-					
-					actions.push(
-					    mytable.setCellDelayed(
-						doMap(csvrow,'Student Name'),
-						doMap(csvrow,'Assignment Name'),
-						doMap(csvrow,'Grade'),
-						doMap(csvrow,'Comment')
-					    )
-					);
-				    }
-				    $popup.hide();
-				    console.log('Here we go!');
-				    loopThroughActions(actions);
-				}) // end import button
-						   );
-			} // end onload
-			reader.readAsText(file);
-		    };
-
-
+		    $popup.buttonbar.append(handler.$buttonArea);
+		    $popup.body.append(handler.$ui);
 		    $popup.body.append(
 			$('<p>Select a CSV file to import grades from.</p>')
 		    );
@@ -618,16 +684,47 @@ function UserInterface () {
 	] // end urls...
 
 
-	
-	
-    }
+    function csvFileHandler ($input, mapfields, actionLabel, actionCallback) {
+	// When file is uploaded to input, create a CSV mapper, then present
+	// button with actionLabel which results in actionCallback being called
+	// with two arguments:
+	// actionCallback(csvDataAsArrayofObjects, MapperFunctionToGoFromMapfieldToCSVField)
+	// the mapper function takes the form...
+	// doMap(CSVROW,FIELDNAME) -> VALUE
+	obj = {}
+	obj.$ui = $('<div>');
+	obj.$buttonArea = $('<span>');
+	var mapper
+	function handleData (e) {
+	    var input = e.target.result
+	    csvObj = $.csv.toObjects(input); // GLOBAL for debugging :)
+	    console.log('Got CSV OBJ %s!',csvObj);
+	    var fields = [];
+	    for (var field in csvObj[0]) {fields.push(field)};
+	    mapper = makeCSVMapper(mapfields,fields) // global
+	    obj.$ui.append(mapper.$div);
+	    mapper.finishUI();
+	    obj.$buttonArea.append(Button(
+		actionLabel,
+		function () {
+		    var doMap = mapper.getMapper();
+		    actionCallback(csvObj,doMap);
+		}));
+	}
 
-    function csvFileHandler (args) {
-	$input = args.$input
-	mapfields = args.mapfields
-	actionLabel = args.actionLabel
-	actionCallback = args.actionCallback
+
+	function handleFiles (files) {
+	    console.log('got files: %s',files);
+	    var file = files[0]
+	    var reader = new FileReader();
+	    reader.onload = handleData;
+	    reader.readAsText(file);
+	}
+
 	$input.change(function () {handleFiles(this.files)});
+	obj.$input = $input;
+	return obj
+    }
 
 
     function makeCSVMapper (labels, valueOptions) {
@@ -650,7 +747,7 @@ function UserInterface () {
 		    }); // end each field selector...
 		return data;
 	    },
-
+	    
 	    getMapper : function () {
 		var map = this.getData();
 		function mapRow (row, name) {
@@ -664,19 +761,20 @@ function UserInterface () {
 		}
 		return mapRow
 	    },
-
+	    
 	    buildUI : function () {
 		self = this;
 		self.$div = $('<div class="aa-mapper" id="'+mid+'">');
 		self.$select = $('<select class="aa-field-select"><option value="">-</option></select>');
 		console.log('Got select: %s',self.$select);
-		valueOptions.map(function (f) {self.$select.append('<option value="'+f+'">'+f+'</option>')});
+		valueOptions.forEach(function (f) {self.$select.append('<option value="'+f+'">'+f+'</option>')});
 		$other = $('<option value="::other">::Other</option>');			    
 		self.$select.append($other);
 		for (var header of labels) {
 		    $fieldSelector = $('<div class="fieldSelector" value="'+header+'">'+header+' :</div>')
 		    self.$div.append($fieldSelector)
 		}
+		
 	    },
 
 	    finishUI : function () { // must be called after we're attached to DOM
@@ -695,8 +793,10 @@ function UserInterface () {
 		    $(fs).find('option').each(
 			function (idx, o) {
 			    var v = $(o).val()
-			    if (v==header) {
+			    if (v.indexOf(header)>-1||header.indexOf(v)>-1) {
 				fs.selected = v;
+				select = $(fs).children('select')[0];
+				select.value = v; select.selected = v;
 			    }
 			});
 		}) // end setting values.
@@ -800,19 +900,39 @@ function Poller () {
 	switch (action.name) {
 	case "comment":
 	    commentAction(action.main,action.private);
+	    chrome.runtime.sendMessage({'mode':'complete',
+					'url':document.URL,
+					'action':action,
+				       },function () {console.log('Completed!');}
+				      );
 	    break;
 	case "writeText":
 	    writeText(action.text);
+	    chrome.runtime.sendMessage({'mode':'complete',
+					'url':document.URL,
+					'action':action,
+				       },function () {console.log('Completed!');}
+				      );
 	    break;
+	case "createAssignment":
+	    console.log('Got action: createAssignment %s',JSON.stringify(action));
+	    var actions = getFillOutAssignmentActions(action.assignment);
+	    var finishIt = function () {
+		console.log('Sending complete signal %s',action);
+		chrome.runtime.sendMessage({'mode':'complete',
+					    'url':document.URL,
+					    'action':action},function () {console.log('Completed async')});
+	    }
+	    // insert our action... 
+	    var lastAct = actions[actions.length-1]
+	    var lastActAction = lastAct.action
+	    lastAct.action = function () {finishIt(); lastActAction()};
+	    loopThroughActions(actions);
+	    break;  // no fall through
 	default:
 	    console.log('No handler for action: %s',action.name);
-	}
-	console.log('Complete action: %s',JSON.stringify(action));
-	chrome.runtime.sendMessage({'mode':'complete',
-				    'url':document.URL,
-				    'action':action,
-				   },function () {console.log('Completed!');}
-				  );
+	    console.log('Complete action: %s',JSON.stringify(action));
+	} // end switch
     }
 
     self.runPoll = function () {
