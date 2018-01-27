@@ -1,7 +1,17 @@
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function demo() {
+  console.log('Taking a break...');
+  await sleep(2000);
+  console.log('Two second later');
+}
+
+
 //DELAY = 500;
 DELAY = 5000;
 
-console.log('Hello world - I injected javascript!');
 //$('body').prepend('HELLO WORLD');
 
 mid_increment = 1
@@ -36,8 +46,9 @@ function setValue (lab, val) {
     getValueSetter().action()
 }
 
-function getValueSetter (lab,val) {
-    $label = $($('span:contains("'+lab+'")')[0]);
+function getValueSetter (lab,val,n) {
+    if (!n) {n=0}
+    $label = $($('span:contains("'+lab+'")')[n]);
     $labelParent = $($label.parent('td'))
     $nextCell = $($labelParent.siblings('td.detailValue')[0]);
     var doExtraCheck, origVals, timer, totalTimer
@@ -71,7 +82,7 @@ function getValueSetter (lab,val) {
 		    0 // charCodeArgs : unsigned long the Unicode character associated with the depressed key, else 0
 		);
 		w.dispatchEvent(keyboardEvent);
-		if (lab=='Category') {doExtraCheck = true};
+		if (lab=='Category'||lab=='Grade Term') {doExtraCheck = true};
 	    }},
 	function () { // completion checker :)
 	    if (timer) {
@@ -150,6 +161,38 @@ function doSave () {
 function doSaveAndNew () {
     console.log('Save and New!');
     $('#saveAndNewButton').click()
+}
+
+
+function getCurrentClass () {
+    var txt = $('#bodytop').text();
+    if (txt.search('::')>-1) {
+	txt = txt.split('::')[1]
+    }
+    return txt.trim();
+}
+
+function setGrademodeAll (after) {
+    var sel = $('select[name="columnFieldSetOid"]')
+    var el = sel[0]
+    if (!el) {
+	console.log("weird - no grade mode yet...");
+	console.log("sleeping 2...");
+	//await sleep(2)
+	console.log("try again");
+	setTimeout(function () {setGrademodeAll(after),200})
+    }
+    else {
+	var option = sel.children()[0]
+	option.dispatchEvent(new MouseEvent("click")) // this actually triggers aspen's js
+	el.dispatchEvent(new MouseEvent("click")) // for good measure
+	el.selectedIndex = 0; // so the UI is in concert w/ reality
+	// Let's try triggering a change event manually...
+	var evt = document.createEvent("HTMLEvents");
+	evt.initEvent("change", true, true);
+	el.dispatchEvent(evt);
+    }
+    after()
 }
 
 
@@ -252,7 +295,22 @@ function TableObject (data) {
 	    // We return a delayed action object -- much code repeated
 	    // from setCell - sorry world -- the logic is just
 	    // different enough to make abstraction awkward
-	    var curcell = self.getCell(rh,ch);
+	    try {
+		var curcell = self.getCell(rh,ch);
+	    }
+	    catch (err) {
+		console.log('Unable to locate cell %s, %s',rh,ch);
+		var da = GenericDelayedAction(showError)
+		function showError () {
+		    console.log('We had an error - now we show it')
+		    console.log('Unable to locate cell %s, %s',rh,ch);
+		    self.showError && self.showError(
+			'Unable to locate cell '+rh+','+ch
+		    );
+		    da.finishAction();
+		}
+		return da;
+	    }
 	    var delayedAction = GenericDelayedAction(setCellInitially)
 	    function setCellInitially () {
 		//$(curcell).click() // Click the cell - jquery click works here
@@ -459,6 +517,24 @@ function addAssignmentsFromAssignmentsTab (assignmentsData) {
     clickOptionsAction('Add Assignment'); // and then we click Add :)
 }
 
+function fillOutStandard () {
+    
+}
+
+function fillOutReportingStandard (std) {
+    // Register action...
+    actions = []
+    var delay
+    actions.push(getValueSetter('Name',std.name));
+    actions.push(getValueSetter('Column header',std.header));
+    actions.push(getValueSetter('Name',std.rubric ? std.rubric : 'Digital Portfolio Scale',1));
+    actions.push(DelayedAction(function () {delay = new Date().getTime()}, function () {return (new Date().getTime()-delay)>1000}));
+    actions.push(DelayedAction(doSave, function () {return true}));
+    loopThroughActions(actions);
+}
+
+
+
 function getFillOutAssignmentActions (data) {
     actionList = []
     //actionList.push(DelayedTimerAction(function () {clickOptionsAction('Add')},500));
@@ -582,6 +658,26 @@ function UserInterface () {
 
     self.urls = [
 	[/.*/, function () {
+	    // branding
+	    showBrand = Button('Aspen Automator', function () {
+		myBrand = $(`<div>
+             <h2>Aspen Automator</h2>
+             <p>Your Aspen Experience is enhanced by Aspen Automator.</p>
+             <p>The <button class="aa-button">Buttons</button> that look like this come from this add-on.</p>
+             <p>This plugin allows importing CSVs into gradebooks and other long-term wish-list items of mine.</p>
+             <p>It relies on automating the Aspen UI, so it will break when they update and YMMV.</p></div>
+             `)
+		myBrand.append(
+		    Button('Toggle Custom Style', function () {
+			$('body').toggleClass('aa-custom-style');
+		    }));
+		var $popup = makePopup()
+		$popup.body.append(myBrand);
+	    });
+	    $('.applicationTitle').append(showBrand);
+	    $('.applicationTitle').closest('table').css({'width':'650px'});
+	}],
+	[/.*/, function () {
 	    b1 = Button('Retry-Action',function () {
 		chrome.runtime.sendMessage({
 		    mode:'retry',
@@ -594,10 +690,32 @@ function UserInterface () {
 		    url:document.URL
 		})
 	    }); // end button 2
+
+
 	    $td = $('<td>')
 	    $td.append(b1); $td.append(b2);
 	    $('#contextMenu').parent().before($td);
 	}],
+	// TEST CODE
+	[/.*/, function () {
+	    b3 = Button('Test Popin',function () {
+		var pop = makePopin()
+		$('body').append(pop);
+	    })
+	    b4 = Button('Test Class Switch', function () {
+		switchClass('Science 360-001')
+	    });
+	    
+	    $td = $('<td>')
+	    $td.append(b3);
+	    $('#contextMenu').parent().before($td)
+	    $td = $('<td>')
+	    $td.append(b4);
+	    $('#contextMenu').parent().before($td)
+
+	}],
+
+	// REMOVE TEST CODE SOON
 	[/assignmentList.do/,function () {
 	    handleFiles = function (files) {
 	    };
@@ -643,6 +761,69 @@ function UserInterface () {
 		      )
 	    );
 	}],
+
+	[/staffGradeInputContainer.do/,function () {
+	    addToOptionBar(
+		Button('Import Grades for Multiple Classes',function () {
+		    console.log('Show import multi-grades UI');
+		    $popup = makePopup();
+	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
+		    handler = csvFileHandler(
+			$input, // the element,
+			['Class','Student Name','Assignment Name','Grade','Comment'], // the fields
+			'Import Grades', // the action name,
+			function (csvObj, doMap) { // the callback
+			    console.log('Got CSV Data: ',csvObj);
+			    mytable = TableObject(getAssignmentsFromGradebook());
+			    mytable.showError = function (e) {
+				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
+				if (! $popin.out) {$popin.doToggle()}
+			    }
+			    actions = []
+			    $popin = makePopin();
+			    $('body').append($popin);
+			    $popin.body.append('<h3>Importing</h3>');
+			    $ul = $('<ul></ul>');
+			    $popin.body.append($ul);
+			    gradesByClass = {}
+			    for (var csvrow of csvObj) {
+				var classname = doMap(csvrow,'Class'); // grab class
+				if (!gradesByClass[classname]) {
+				    gradesByClass[classname] = []
+				}
+				gradesByClass[classname].push(
+				    [doMap(csvrow,'Student Name'),
+				    doMap(csvrow,'Assignment Name'),
+				    doMap(csvrow,'Grade'),
+				    doMap(csvrow,'Comment')]
+				    // arguments to setCellDelayed...
+				)
+			    }
+			    // Now we have the items we need...
+			    chrome.runtime.sendMessage({
+				mode:'register',
+				url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
+				action: {name:'multiClass',
+					 data:gradesByClass}
+			    });
+			    $ul.append(
+				$('<li>'+'Sent multiclass data'+'</li>')
+			    );
+			    $ul.append(
+				$('<pre>'+gradesByClass+'</pre>')
+			    );
+			    console.log('Here we go! MULTICLASS:'+gradesByClass);
+			}); // end handler creation :)
+		    $popup.buttonbar.prepend($input);
+		    $popup.buttonbar.append(handler.$buttonArea);
+		    $popup.body.append(handler.$ui);
+		    $popup.body.append(
+			$('<p>Select a CSV file to import grades from.</p>')
+		    );
+		})
+	    );
+	}],
+
 	[/staffGradeInputContainer.do/,function () {
 	    addToOptionBar(
 		Button('Import Assignment Grades',function () {
@@ -656,8 +837,21 @@ function UserInterface () {
 			function (csvObj, doMap) { // the callback
 			    console.log('Got CSV Data: ',csvObj);
 			    mytable = TableObject(getAssignmentsFromGradebook());
+			    mytable.showError = function (e) {
+				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
+				if (! $popin.out) {$popin.doToggle()}
+			    }
 			    actions = []
+			    $popin = makePopin();
+			    $('body').append($popin);
+			    $popin.body.append('<h3>Importing</h3>');
+			    $ul = $('<ul></ul>');
+			    $popin.body.append($ul);
 			    for (var csvrow of csvObj) {
+				console.log('Appending to ul %s on %s',$ul,$popup);
+				$ul.append(
+				    $('<li>'+doMap(csvrow,'Student Name')+' '+doMap(csvrow,'Assignment Name')+'</li>')
+				);
 				actions.push(
 				    mytable.setCellDelayed(
 					doMap(csvrow,'Student Name'),
@@ -703,13 +897,14 @@ function UserInterface () {
 	    for (var field in csvObj[0]) {fields.push(field)};
 	    mapper = makeCSVMapper(mapfields,fields) // global
 	    obj.$ui.append(mapper.$div);
-	    mapper.finishUI();
 	    obj.$buttonArea.append(Button(
 		actionLabel,
 		function () {
 		    var doMap = mapper.getMapper();
 		    actionCallback(csvObj,doMap);
 		}));
+	    mapper.finishUI();
+	    console.log('Finish UI!');
 	}
 
 
@@ -793,10 +988,16 @@ function UserInterface () {
 		    $(fs).find('option').each(
 			function (idx, o) {
 			    var v = $(o).val()
-			    if (v.indexOf(header)>-1||header.indexOf(v)>-1) {
-				fs.selected = v;
-				select = $(fs).children('select')[0];
-				select.value = v; select.selected = v;
+			    console.log("Check %s against %s",header,v);
+			    if (header && v) {
+				if (v.indexOf(header)>-1||header.indexOf(v)>-1) {
+				    fs.selected = v;
+				    console.log('We better select this baby!');
+				    select = $(fs).children('select')[0];
+				    select.value = v; select.selected = v;
+				    console.log('Set alue to: %s',v);
+				    console.log('Set selected to %s',v)
+				}
 			    }
 			});
 		}) // end setting values.
@@ -811,11 +1012,34 @@ function UserInterface () {
 	}
 	return Mapper
     }
+
+
+    function makePopin () {
+	var $popin = $('<div class="aa-popin"></div>');
+	$button = $('<span class="aa-slideButton">&gt;</span>');
+	$popin.append($button);
+	//$popin.append($('<ul><li>Here</li><li>Is a test</li><li>Of the pop-in</li></ul>'));
+	$popin.body = $('<div class="aa-popinbody"></div>')
+	$popin.append($popin.body);
+	$popin.out = true
+	$popin.doToggle = function () {
+	    if ($popin.out) {
+		$popin.animate({'right':'-220px'})
+	    }
+	    else {
+		$popin.animate({'right':'0px'})
+	    }
+	    $popin.out = ! $popin.out;
+	}
+	$button.click($popin.doToggle)
+	$popin.css({'right':'-100px'})
+	return $popin;
+    }
 	 
     function makePopup () {
 	var $popup = $('<div class="aa-popup"><div class="aa-buttonbar"></div></div>');
 	$body = $('<div class="aa-body"></div>');
-	$buttonbar = $('<div clas="aa-buttonbar"></div>');
+	$buttonbar = $('<div class="aa-buttonbar"></div>');
 	$close = Button('Close',function () {$popup.hide()});
 	$buttonbar.append($close);
 	$popup.append($body);
@@ -929,10 +1153,99 @@ function Poller () {
 	    lastAct.action = function () {finishIt(); lastActAction()};
 	    loopThroughActions(actions);
 	    break;  // no fall through
+
+
+	case "selectClass":
+	    console.log('selectClass %s',action);
+	    self.complete(action); // complete first so we know the code runs :)
+	    selectClass(action.classname)
+	    break;
+
+
+	case "sideTab":
+	    console.log("sideTab %s',action");
+	    self.complete(action); // complete first so we know the code runs :)
+	    sideTab(action.tab).click();
+	    break;
+
+
+	case "multiClass":
+	    var found;
+	    console.log("multiClass action %s",action);
+	    var curClass = getCurrentClass();
+	    for (var classname in action.data) {
+		if (curClass.search(classname)>-1) {
+		    curClass = classname
+		    found = true;
+		}
+	    }
+	    var actions = []
+	    if (found && action.data[curClass] && action.data[curClass].length > 0) {
+		console.log('We have data to enter for this class! %s',curClass)
+		console.log('Data: ',action.data[curClass]);
+		setTimeout(function () {
+		setGrademodeAll(
+		    function () {
+		    mytable = TableObject(getAssignmentsFromGradebook());
+		    for (var i=0; i<action.data[curClass].length; i++) {
+			var row = action.data[curClass][i]
+			console.log('Working with data: %s',row);
+			actions.push(mytable.setCellDelayed.apply(this,row));
+		    }
+		    action.data[curClass] = false; // done!
+		    actions.push(DelayedAction(
+			function () {
+			    // register for more...
+			    chrome.runtime.sendMessage({
+				mode:'register',
+				url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
+				action:{name:'multiClass',
+					data:action.data}
+			    });
+			},
+			function () {return true}
+		    ));
+		    self.complete(action)
+		    loopThroughActions(actions)
+		    });
+		},1000);
+	    }
+	    else {
+		console.log('No data for this class: %s',curClass);
+		for (var classname in action.data) {
+		    if (action.data[classname].length>0) {
+			console.log('Switch to %s to complete %s rows',classname,action.data[classname].length);
+			chrome.runtime.sendMessage({
+			    mode:'register',
+			    url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
+			    action:{name:'multiClass',
+				    data:action.data}
+			});
+			self.complete(action);
+			switchClass(classname);
+			return;
+		    }
+		}
+		console.log('Weird, we made it to this part of the loop without switching...')
+		self.complete(action);
+	    }
+	    // end multiClass
+	    break;
+
+
 	default:
 	    console.log('No handler for action: %s',action.name);
 	    console.log('Complete action: %s',JSON.stringify(action));
 	} // end switch
+    }
+
+    self.complete = function (action) {
+	chrome.runtime.sendMessage(
+	    {mode:'complete',
+	     url:document.URL,
+	     action:action},
+	    function () {'Action marked complete: %s',action}
+	);
     }
 
     self.runPoll = function () {
@@ -940,6 +1253,7 @@ function Poller () {
 	    {'mode':'get',
 	     'url':document.URL},
 	    function (action) {
+		console.log('Polling got %s',action);
 		if (action==BUSY) {
 		    console.log('Already busy completing a task.');
 		}
@@ -970,55 +1284,82 @@ $(document).ready(function () {
     var ui = UserInterface()
     setTimeout(ui.updateInterface,500); // delay :)
     
-    // if (document.URL.indexOf('common/scFrameContent.html')>1) {
-    // 	// If we are in a message window, grab the context...
-    // 	chrome.runtime.sendMessage(
-    // 	    {'mode':'get',
-    // 	     'context':'comment'},
-    // 	    function (commentContent) { //
-    // 		$('body').append(commentContent);
-    // 	    }
+    // // if (document.URL.indexOf('common/scFrameContent.html')>1) {
+    // // 	// If we are in a message window, grab the context...
+    // // 	chrome.runtime.sendMessage(
+    // // 	    {'mode':'get',
+    // // 	     'context':'comment'},
+    // // 	    function (commentContent) { //
+    // // 		$('body').append(commentContent);
+    // // 	    }
 
 	
+    // // }
+    // // else {
+    // function addButton (txt, callback) {
+    // 	$td = $('<td>')
+    // 	$b = $('<span>')
+    // 	$b.css('border','2px solid red')
+    // 	$b.click(callback)
+    // 	$b.append(txt);
+    // 	$td.append($b);
+    // 	$('.applicationSubtitle').append($td);	
     // }
-    // else {
-    function addButton (txt, callback) {
-	$td = $('<td>')
-	$b = $('<span>')
-	$b.css('border','2px solid red')
-	$b.click(callback)
-	$b.append(txt);
-	$td.append($b);
-	$('.applicationSubtitle').append($td);	
-    }
     
-    addButton('Fill out assignment',testTable);
-    addButton('Save',doSave)
-    addButton('Grab Grade Table',function () {
-	mytable = TableObject(getAssignmentsFromGradebook()); // GLOBAL
-	console.log('Test setting value :)');
-	mytable.setCell('Apostolos, Haley','test','B+')
-	mytable.setCell('Brody, Jocelyn','test','C+')
-	mytable.setCell('Lennon, Keegan','test','B-')
-	mytable.setCell('Schmidt, Joshua','test','A','A comment for Josh!')
-    });
+    // addButton('Fill out assignment',testTable);
+    // addButton('Save',doSave)
+    // addButton('Grab Grade Table',function () {
+    // 	mytable = TableObject(getAssignmentsFromGradebook()); // GLOBAL
+    // 	console.log('Test setting value :)');
+    // 	mytable.setCell('Apostolos, Haley','test','B+')
+    // 	mytable.setCell('Brody, Jocelyn','test','C+')
+    // 	mytable.setCell('Lennon, Keegan','test','B-')
+    // 	mytable.setCell('Schmidt, Joshua','test','A','A comment for Josh!')
+    // });
 
-    addButton('Auto Grade Delayed',
-	      function () {
-		  mytable = TableObject(getAssignmentsFromGradebook());
-		  actions = [
-		      mytable.setCellDelayed('Labbe, Ashley','test','C+','Ashley was here'),
-		      mytable.setCellDelayed('Apostolos, Haley','test','A-','Haley is so fabulous!!!'),
-		      mytable.setCellDelayed('Brody, Jocelyn','test','B-','Josie is so fabulous!!!'),
-		      mytable.setCellDelayed('Fonseca, Melissa','test','B+','Melissa is so so fabulous!!!'),
-		      mytable.setCellDelayed('Hoyt, Zachary','test','C+','Zach does music.'),
-		      mytable.setCellDelayed('Nason, Logan','test','A','Logan is the best!!!'),
-		      mytable.setCellDelayed('Nealey, Jane','test','C-','Jane should get a C once in a while.'),
-		      mytable.setCellDelayed('Trujillo, Bianca','test','A','Bianca is fine and dandy'),
-		      mytable.setCellDelayed('Weldon, Marguerite','test','A-','Meg is thoughtful.'),
-		  ]
-		  loopThroughActions(actions);
-	      });
-    addButton('Test Messaging Yeah Yeah Yeah',testMessaging);
+    // addButton('Auto Grade Delayed',
+    // 	      function () {
+    // 		  mytable = TableObject(getAssignmentsFromGradebook());
+    // 		  actions = [
+    // 		      mytable.setCellDelayed('Labbe, Ashley','test','C+','Ashley was here'),
+    // 		      mytable.setCellDelayed('Apostolos, Haley','test','A-','Haley is so fabulous!!!'),
+    // 		      mytable.setCellDelayed('Brody, Jocelyn','test','B-','Josie is so fabulous!!!'),
+    // 		      mytable.setCellDelayed('Fonseca, Melissa','test','B+','Melissa is so so fabulous!!!'),
+    // 		      mytable.setCellDelayed('Hoyt, Zachary','test','C+','Zach does music.'),
+    // 		      mytable.setCellDelayed('Nason, Logan','test','A','Logan is the best!!!'),
+    // 		      mytable.setCellDelayed('Nealey, Jane','test','C-','Jane should get a C once in a while.'),
+    // 		      mytable.setCellDelayed('Trujillo, Bianca','test','A','Bianca is fine and dandy'),
+    // 		      mytable.setCellDelayed('Weldon, Marguerite','test','A-','Meg is thoughtful.'),
+    // 		  ]
+    // 		  loopThroughActions(actions);
+    // 	      });
+    // addButton('Test Messaging Yeah Yeah Yeah',testMessaging);
     //}
 });
+
+//select class...
+function selectClass (classname) {
+    console.log('selectClass(%s)',classname);
+    $('#dataGrid a:contains("'+classname+'")')[0].click();    
+}
+
+function switchClass (classname) {    
+    console.log('Switching class to %s',classname);
+    
+    console.log('Register listeners to switch to class');
+    chrome.runtime.sendMessage({
+	'mode':'register',
+	'url':'gradebookClassList.do?navkey=gradebook.classes.list',
+	'action':{'name':'selectClass',
+		  'classname':classname}
+    });
+    console.log('Register listener to switch to gradebook');
+    chrome.runtime.sendMessage({
+	mode:'register',
+	url:'gradebook.classes.list.detail',
+	action: {name:'sideTab',
+		 tab:'Scores'}
+    });
+    console.log('switch to gradebook');
+    topTabAction('Gradebook').click();;
+}
