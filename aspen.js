@@ -1,11 +1,20 @@
+function log () {
+    console.log.apply(this,arguments);
+    chrome.runtime.sendMessage({
+	mode:'log',
+	arguments:arguments,
+	context:document.URL
+    })
+}
+
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function demo() {
-  console.log('Taking a break...');
-  await sleep(2000);
-  console.log('Two second later');
+    log('Taking a break...');
+    await sleep(2000);
+    log('Two second later');
 }
 
 
@@ -17,7 +26,7 @@ DELAY = 5000;
 mid_increment = 1
 
 function remoteControlTest () {
-    console.log('Remote Control Test');
+    log('Remote Control Test');
     $(':contains("Add Assignment")').click()
 }
 
@@ -58,7 +67,7 @@ function getValueSetter (lab,val,n) {
     waitTime = 500;
     return DelayedAction(
 	function () {
-	    console.log('Setting widget %s to %s (%s)',w,val,lab);
+	    log('Setting widget %s to %s (%s)',w,val,lab);
 	    w.value = val;
 	    // X2 does some black magic when updating some fields that requires
 	    // us to simulate a keypress in order to get their onchange to fire
@@ -89,7 +98,7 @@ function getValueSetter (lab,val,n) {
 		// if we're using a timer...
 		elapsed = new Date().getTime() - timer
 		if (elapsed > waitTime) {
-		    console.log('After I waited %s, moving on',waitTime);
+		    log('After I waited %s, moving on',waitTime);
 		    return true
 		}
 		else {
@@ -99,7 +108,7 @@ function getValueSetter (lab,val,n) {
 	    if (valueWidgets.length > 1 && doExtraCheck) {
 		newVals = valueWidgets.map(function () {return this.value}).slice(1)
 		if (newVals.toArray().toString()!=origVals.toArray().toString()) {
-		    console.log('Updated %s to %s!',origVals.toArray().toString(),newVals.toArray().toString())
+		    log('Updated %s to %s!',origVals.toArray().toString(),newVals.toArray().toString())
 		    timer = new Date().getTime()
 		    waitTime = 500;
 		}
@@ -130,10 +139,11 @@ function spawnWaiter (url, onComplete) {
     waiter()
 }
 
+
 function setTable (data) {
     actions = []
     for (var cat in data) {
-	console.log('cat',cat,':',data[cat])
+	log('cat',cat,':',data[cat])
 	actions.push(getValueSetter(cat,data[cat]));
     }
     actions.push(DelayedAction(doSave,function () {return true}));
@@ -154,12 +164,12 @@ function testTable () {
 }
 
 function doSave () {
-    console.log('do save!');
+    log('do save!');
     $('#saveButton').click()
 }
 
 function doSaveAndNew () {
-    console.log('Save and New!');
+    log('Save and New!');
     $('#saveAndNewButton').click()
 }
 
@@ -172,14 +182,25 @@ function getCurrentClass () {
     return txt.trim();
 }
 
+function getCurrentClassFromKeys (obj) {
+    var curClass = getCurrentClass()
+    for (var classname in obj) {
+	if (curClass.search(classname)>-1) {
+	    log('At our current class');
+	    return classname;
+	}
+    }
+}
+
+
 function setGrademodeAll (after) {
     var sel = $('select[name="columnFieldSetOid"]')
     var el = sel[0]
     if (!el) {
-	console.log("weird - no grade mode yet...");
-	console.log("sleeping 2...");
+	log("weird - no grade mode yet...");
+	log("sleeping 2...");
 	//await sleep(2)
-	console.log("try again");
+	log("try again");
 	setTimeout(function () {setGrademodeAll(after),200})
     }
     else {
@@ -187,11 +208,13 @@ function setGrademodeAll (after) {
 	option.dispatchEvent(new MouseEvent("click")) // this actually triggers aspen's js
 	el.dispatchEvent(new MouseEvent("click")) // for good measure
 	el.selectedIndex = 0; // so the UI is in concert w/ reality
+	log('Set grademode!');
 	// Let's try triggering a change event manually...
 	var evt = document.createEvent("HTMLEvents");
 	evt.initEvent("change", true, true);
 	el.dispatchEvent(evt);
     }
+    log('Run next thing...');
     after()
 }
 
@@ -230,7 +253,7 @@ function getAssignmentsFromGradebook () {
 	    function (i,tr) {
 		cells = rows[offset];
 		if (! cells) {
-		    console.log('Error at offset % tacking on %s (selector %s)',offset,tr,selector);
+		    log('Error at offset % tacking on %s (selector %s)',offset,tr,selector);
 		}
 		else {
 		    offset += 1;
@@ -242,36 +265,36 @@ function getAssignmentsFromGradebook () {
 	    });
     }
     pushToRows(leftSideHeader);
-    //console.log('rows at this point: %s',rows.toString())
+    //log('rows at this point: %s',rows.toString())
     appendToRows(rightSideHeader);
-    //console.log('rows at this point: %s',rows.toString())
+    //log('rows at this point: %s',rows.toString())
     headerLength = rows.length;
-    //console.log('rows at this point: %s',rows.toString())
+    //log('rows at this point: %s',rows.toString())
     pushToRows(leftSideBottom);
-    //console.log('rows at this point: %s',rows.toString())
+    //log('rows at this point: %s',rows.toString())
     appendToRows(rightSideBottom,headerLength);
-    //console.log('rows at this point: %s',rows.toString())
+    //log('rows at this point: %s',rows.toString())
     globals = {'leftSideBottom':leftSideBottom,rightSideBottom:rightSideBottom,
 	       leftSideHeader:leftSideHeader, rightSideHeader:rightSideHeader}
     return rows
 }
 
 function TableObject (data) {
-    obj = {
+    var obj = {
 	colHeaders : [],
 	rowHeaders : [],
 
 	getData : function () { return data},
 
 	getRow : function (rh) {
-	    self = this
+	    self = obj;
 	    var idx = self.rowHeaders.indexOf(rh);
 	    if (idx == -1) {throw 'Not found :('}
 	    return data[idx]
 	},
 
 	getCol : function (ch) {
-	    self = this;
+	    self = obj;
 	    var idx = self.colHeaders.indexOf(ch);
 	    if (idx==-1) {throw 'not found'}
 	    col = []
@@ -280,7 +303,7 @@ function TableObject (data) {
 	},
 
 	getCell : function (rh, ch) {
-	    self = this;
+	    self = obj;
 	    colIndex = this.colHeaders.indexOf(ch);
 	    rowIndex = this.rowHeaders.indexOf(rh);
 	    if (colIndex == -1) {throw 'No column '+ch}
@@ -291,7 +314,7 @@ function TableObject (data) {
 	},
 
 	setCellDelayed : function (rh, ch, val, commentContent) {
-	    self = this;
+	    self = obj;
 	    // We return a delayed action object -- much code repeated
 	    // from setCell - sorry world -- the logic is just
 	    // different enough to make abstraction awkward
@@ -299,11 +322,12 @@ function TableObject (data) {
 		var curcell = self.getCell(rh,ch);
 	    }
 	    catch (err) {
-		console.log('Unable to locate cell %s, %s',rh,ch);
+		log('Got error: %s (self=%s)',err,self);
+		log('Unable to locate cell %s, %s',rh,ch);
 		var da = GenericDelayedAction(showError)
 		function showError () {
-		    console.log('We had an error - now we show it')
-		    console.log('Unable to locate cell %s, %s',rh,ch);
+		    log('We had an error - now we show it')
+		    log('Unable to locate cell %s, %s',rh,ch);
 		    self.showError && self.showError(
 			'Unable to locate cell '+rh+','+ch
 		    );
@@ -324,12 +348,12 @@ function TableObject (data) {
 		    // Set comment
 		    // click input in cell so comment icon shows up...
 		    if (input) {input.dispatchEvent(new MouseEvent("click"))}; 
-		    		var imgLink = $(curcell).find('img')
+		    var imgLink = $(curcell).find('img')
 		    var onclick = imgLink[0].getAttribute('onclick');
 		    var re = /.*doPopup\(['"]([^\),'"]*)/;
 		    var onclickUrl = re.exec(onclick)[1]
 		    onclickUrl = onclickUrl.trim();
-		    console.log('Onclick URL=%s',onclickUrl);
+		    log('Onclick URL=%s',onclickUrl);
 		    const context = 'comment'
 		    chrome.runtime.sendMessage(
 			{mode:'register',
@@ -342,14 +366,14 @@ function TableObject (data) {
 		    // Now we need to check on when it's done :)
 		    // spawnWaiter kicks it to the backend to see when this is done...
 		    spawnWaiter(onclickUrl,function () {
-			console.log('Sleep before we finish -- 3s');
+			log('Sleep before we finish -- 3s');
 			// Use delayed action to set up a listener to only continue after the
 			// image icon has updated :(
 			loopThroughActions(
 			    [DelayedAction(
 				function () {},
 				function () { // check for completion...
-				    console.log('Checking image icon...');
+				    log('Checking image icon...');
 				    return $(curcell)
 					.find('img')
 					.attr('src')
@@ -369,33 +393,33 @@ function TableObject (data) {
 	},
 
 	setCell : function (rh, ch, val, commentContent) {
-	    self = this;
+	    self = obj;
 	    var curcell = self.getCell(rh,ch);
 	    $(curcell).click()
 	    $(curcell).find('input').val(val);
 	    var input = $(curcell).find('input')[0];
 	    if (input) {input.dispatchEvent(new MouseEvent("click"));}
-	    else {console.log('No input found for %s',curcell)}
+	    else {log('No input found for %s',curcell)}
 	    if (commentContent) {
-		console.log('Got commentContent %s, clicking',commentContent);
+		log('Got commentContent %s, clicking',commentContent);
 		var imgLink = $(curcell).find('img')
 		var onclick = imgLink[0].getAttribute('onclick');
 		var re = /.*doPopup\(['"]([^\),'"]*)/;
 		var onclickUrl = re.exec(onclick)[1]
 		onclickUrl = onclickUrl.trim();
-		console.log('Onclick URL=%s',onclickUrl);
+		log('Onclick URL=%s',onclickUrl);
 		const context = 'comment'
 		chrome.runtime.sendMessage(
 		    {'mode':'register',
-		     'url':onclickUrl,
-		     'action':{'main':commentContent,'private':commentContent,'name':'comment'}
+		      'url':onclickUrl,
+		      'action':{'main':commentContent,'private':commentContent,'name':'comment'}
 		    },
-		     function () { // callback for registering comment
-			 $(curcell).find('img').click();
-		     });
+		    function () { // callback for registering comment
+			$(curcell).find('img').click();
+		    });
 	    } // end if comment
 	    else {
-		console.log('No comment');
+		log('No comment');
 	    }
 	}
     }
@@ -404,7 +428,7 @@ function TableObject (data) {
 	textContent = cell.textContent.trim();
 	if (textContent.indexOf('\n') > -1) { // if there's newlines...
 	    // Try to clean this up...
-	    console.log('Try to clean this baby up: has newlines');
+	    log('Try to clean this baby up: has newlines');
 	    if ($(cell).find('a').length) {
 		links = $(cell).find('a')
 		if (links[0].textContent != '...') {
@@ -412,13 +436,13 @@ function TableObject (data) {
 		}
 	    }
 	}
-	console.log('Setting colHeader to: "%s"',textContent);
+	log('Setting colHeader to: "%s"',textContent);
 	obj.colHeaders.push(textContent);
     }
     for (var row of data) {
 	obj.rowHeaders.push(row[0].textContent.trim());
     }
-    console.log('Returning object: ',obj);
+    log('Returning object: ',obj);
     return obj
 }
 
@@ -440,7 +464,7 @@ function printArray (data) {
 	}
 	output = output + cellstr + '\n'
     }
-    console.log('printArray:\n'+output)
+    log('printArray:\n'+output)
 }
 
 
@@ -451,7 +475,7 @@ function commentAction (comment) {
     var done = false
     // Now we have to fire off a bunch of actions...
     // Step 1. register our actions...
-    console.log('commentAction %s',comment);
+    log('commentAction %s',comment);
     if (comment) {
 	chrome.runtime.sendMessage(
 	    {mode:'register',
@@ -468,14 +492,14 @@ function commentAction (comment) {
 		// to keep checking
 		spawnWaiter(textUrl,
 			    function () {
-				console.log('Sleep before saving...');
+				log('Sleep before saving...');
 				//setTimeout(function () {
-				    $('#scTextComment').click()
-				    $('#scTextComment')[0].dispatchEvent(new MouseEvent("click"));
-				    $('#saveButton').click();
-				    console.log('Clicked save!')
-				    $('#saveButton')[0].dispatchEvent(new MouseEvent("click"));
-				    done = true;//}, 1);
+				$('#scTextComment').click()
+				$('#scTextComment')[0].dispatchEvent(new MouseEvent("click"));
+				$('#saveButton').click();
+				log('Clicked save!')
+				$('#saveButton')[0].dispatchEvent(new MouseEvent("click"));
+				done = true;//}, 1);
 			    });
 	    }) // done registering
     }
@@ -501,8 +525,8 @@ function clickOptionsAction (actionName) {
     $('.menuOption:contains("'+actionName+'")').click()
 }
 
-function addAssignmentsFromAssignmentsTab (assignmentsData) {
-    var firstOne = true;
+function addAssignmentsFromAssignmentsTab (assignmentsData, after) {
+    var firstOne = true;//}
     for (const assignment of assignmentsData) {
 	// we register all the actions :)
 	chrome.runtime.sendMessage({
@@ -513,7 +537,13 @@ function addAssignmentsFromAssignmentsTab (assignmentsData) {
 	})
 	firstOne = false;
     }
-    // then we click add
+    if (after) {
+	chrome.runtime.sendMessage({
+	    'mode':'register',
+	    'url':'assignmentDetail.do',
+	    'action':after
+	});
+    }
     clickOptionsAction('Add Assignment'); // and then we click Add :)
 }
 
@@ -604,7 +634,7 @@ function getNavigationActions (topTab, sideTab) {
 
 
 function testMessaging () {
-    console.log('Test grabbing test actions!');
+    log('Test grabbing test actions!');
     chrome.runtime.sendMessage({mode:'register',
 				url:document.URL,
 				action:'TEST # 1'})
@@ -615,34 +645,34 @@ function testMessaging () {
 					action:'TEST # other after a sec'})
 	}, 1000)
     
-	    
+    
     // chrome.runtime.sendMessage({'mode':'get','context':'test'},
     // 			       function (a) {
-    // 				   console.log('Called get, got back data: %s',JSON.stringify(a));
+    // 				   log('Called get, got back data: %s',JSON.stringify(a));
     // 			       })
-    // console.log('Test grabbing test actions! x2');
+    // log('Test grabbing test actions! x2');
     // chrome.runtime.sendMessage({'mode':'get','context':'test'},
     // 			       function (a) {
-    // 				   console.log('2 Called get, got back data: %s',JSON.stringify(a));
+    // 				   log('2 Called get, got back data: %s',JSON.stringify(a));
     // 			       })
     
     // var actions = [{'do':'Add Table','data': {foo:1,bar:2,baz:3}},
     // 		   {'do':'Add Table','data': {foo:4,bar:5,baz:7}},
     // 		   {'do':'Add Table','data': {foo:10,bar:8,baz:9}}]
     // function registerAnAction (action) {
-    // 	console.log('registerAnAction %s',action);
+    // 	log('registerAnAction %s',action);
     // 	chrome.runtime.sendMessage({mode: "register",'action':action, context:'a'},
     // 				   function(i) {
-    // 				       console.log('Registered as action #%s',i);
+    // 				       log('Registered as action #%s',i);
     // 				       chrome.runtime.sendMessage(
     // 					   {mode:'get',context:'a'},
     // 					   function (action) {
-    // 					       console.log('Doing action: %s',action);
+    // 					       log('Doing action: %s',action);
     // 					       chrome.runtime.sendMessage({
     // 						   'mode':'complete',
     // 						   action:action,
     // 						   context:'a'})
-    // 					       console.log('Done completing action %s',action);
+    // 					       log('Done completing action %s',action);
     // 					   }) // end get action...
     // 				   }) // end register action
     // } // end registerAnAction
@@ -680,7 +710,7 @@ function UserInterface () {
 	[/.*/, function () {
 	    b1 = Button('Retry-Action',function () {
 		chrome.runtime.sendMessage({
-		    mode:'retry',
+		    mode:'reset',
 		    url:document.URL,
 		});
 	    });
@@ -698,20 +728,33 @@ function UserInterface () {
 	}],
 	// TEST CODE
 	[/.*/, function () {
-	    b3 = Button('Test Popin',function () {
-		var pop = makePopin()
-		$('body').append(pop);
+	    b3 = Button('Test CSV',function () {
+                var $popup = makePopup();
+                var dh = csvDataHandler(
+                    ['Category','GB column name'],
+                    'Test Test',
+                    function (csvData,doMap) {
+                        console.log('got data: %s',JSON.stringify(csvData));
+                        console.log('Row 1 Category: ',doMap(csvData[0],'Category'));
+                        console.log('Row 1 GB: ',doMap(csvData[0],'GB column name'));
+                    }
+                );
+                $popup.buttonbar.append(dh.$buttonArea);
+                $popup.body.append(dh.$ui);
+                dh.handleData(
+                    'header1,header2,header3\n23,24,52\n123,123,123\n431,412,412\n29,951,124\naer,oiuwer,sldkfj'
+                );
 	    })
-	    b4 = Button('Test Class Switch', function () {
-		switchClass('Science 360-001')
-	    });
+	    // b4 = Button('Test Class Switch', function () {
+	    //     switchClass('Science 303-001','scores')
+	    // });
 	    
 	    $td = $('<td>')
 	    $td.append(b3);
 	    $('#contextMenu').parent().before($td)
-	    $td = $('<td>')
-	    $td.append(b4);
-	    $('#contextMenu').parent().before($td)
+	    // $td = $('<td>')
+	    // $td.append(b4);
+	    // $('#contextMenu').parent().before($td)
 
 	}],
 
@@ -719,22 +762,23 @@ function UserInterface () {
 	[/assignmentList.do/,function () {
 	    handleFiles = function (files) {
 	    };
+
 	    addToOptionBar(
-		Button('Import Assignments', function () {
-		    console.log('Add Assignment');
+		Button('Import Assignments for Multiple Classes', function () {
+		    log('Add multi-assignments');
 		    $popup = makePopup();
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
 		    $input.change(function () {handleFiles(this.files)});
-		    var fields = ['Category','GB column name','Assignment name','Date assigned','Date due','Total points','Extra credit points','Grade Scale','Grade Term']
-		    handler = csvFileHandler(
+		    var fields = assignmentFields;
+		    var handler = csvFileHandler(
 			$input,
 			fields,
 			'Import Assignments',
 			function (csvObj,doMap) {
-			    console.log('Got data!')
+			    log('Got data!')
 			    csvObj = csvObj
 			    doMap = doMap
-			    var assignments = []
+			    var assignments = [] 
 			    for (var csvrow of csvObj) {
 				var assignment = {}
 				for (var f of fields) {
@@ -743,14 +787,81 @@ function UserInterface () {
 					assignment[f] = val;
 				    }
 				    else {
-					console.log('No value for %s',f);
+					log('No value for %s',f);
 				    }
 				}
 				assignments.push(assignment);
 			    }
-			    console.log('Pushing assignments: %s',assignments);
-			    addAssignmentsFromAssignmentsTab(assignments);
+			    log('Pushing assignments: %s',assignments);
+			    var byClass = {}
+			    assignments.forEach((a)=>{
+				if (!byClass[a['Course Code']]) {
+				    byClass[a['Course Code']] = []
+				}
+				byClass[a['Course Code']].push(a);
+			    }
+			                       );
+			    chrome.runtime.sendMessage({
+				mode:'register',
+				url:'gradebook.classes.list.gcd',
+				action : {
+				    name : 'multiAssignments',
+				    data : byClass,
+				}
+			    });
+			    log('Registered!');
+			    // We used to do this here -- we will get rid of this and move it to poller...
+			    // for (var c in byClass) {
+			    // 	log('Register switch to %s',c);
+			    // 	chrome.runtime.sendMessage({
+			    // 	    mode:'register',
+			    // 	    url:'aspen/assignmentDetail.do',
+			    // 	    action: {
+			    // 		name:'switchClass',
+			    // 		classname:c,
+			    // 		next:'assignments'
+			    // 	    }
+			    // 	});
+			    // 	log('Register add assignments for %s assignments',byClass[c].length);
+			    // 	chrome.runtime.sendMessage({
+			    // 	    mode:'register',
+			    // 	    url:'gradebook.classes.list.gcd',
+			    // 	    action:{
+			    // 		name:'createAssignments',
+			    // 		data:byClass[c],
+			    // 	    }
+			    // 	});
+			    // }
+			    sideTab('Assignments').click(); // click
 			}
+		    );
+		    $popup.buttonbar.prepend($input);
+		    $popup.buttonbar.append(handler.$buttonArea);
+		    $popup.body.append(
+			handler.$ui
+		    );
+		})
+	    );
+
+
+
+	}
+	 
+	], // end multi-assignment
+
+
+	[/assignmentList.do/,function () {
+	    addToOptionBar(
+		Button('Import Assignments', function () {
+		    log('Add Assignment');
+		    $popup = makePopup();
+	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
+		    var fields = assignmentFields;
+		    var handler = csvFileHandler(
+			$input,
+			fields,
+			'Import Assignments',
+                        importAssignmentsFromCsvCallback
 		    );
 		    $popup.buttonbar.prepend($input);
 		    $popup.buttonbar.append(handler.$buttonArea);
@@ -762,18 +873,141 @@ function UserInterface () {
 	    );
 	}],
 
+        // Google Classroom Assignment Import
+        [/assignmentList.do/,function () {
+            console.log('Setup classroom button');
+            addToOptionBar(
+                Button('Import Google Classroom Assignments', ()=>{
+                    var gcp = GoogleClassroomPicker( // GLOBAL FOR DEBUGGING
+                        'Import Google Classroom Assignments',
+                        (assignments)=>{
+                            console.log('GOT ASSIGNMENTS!');
+                            assgns = assignments
+                            console.log('in global: assgns');
+                            console.log(assgns);
+                            assignments.forEach((a)=>{
+                                a.Category = 'WH';
+                                a['GB column name'] = a.aspenShort;
+                                a['Assignment name'] = a.aspenLong;
+                                a['Date assigned'] = dateToAspenDate(new Date(a.creationTime));
+                                a['Date due'] = a.dueDate.month+'/'+a.dueDate.day+'/'+a.dueDate.year;
+                                a['Total points'] = a.maxPoints;
+                                a['Extra credit points'] = 0;
+                                a['Grade Scale'] = 'Current High School Grade Scale';
+                                a['Grade Term'] = 'S1';
+                            });
+                            console.log('Now let\'s import them!')
+                            addAssignmentsFromAssignmentsTab(assignments);
+                        }
+                    );
+                }
+                      )
+            );
+            // function () {
+            //         var $popup = makePopup();
+            //         var courseId = 16239843774; // fixme - hardcoded
+            //         $popup.body.append(
+            //             $('<p>Assuming this is Web Design: hardcoded for now -- sorry</p>')
+            //         );
+            //         $popup.buttonbar.append(
+            //             Button('Import!', function () {
+            //                 console.log('Clicked classroom import!');
+            //                 $loader = $popup.body.append('Loading assignment data...');
+            //                 chrome.runtime.sendMessage(
+            //                     {
+            //                         mode:'classroom',
+            //                         method:'listGradedAssignments',
+            //                         params:{id:courseId}
+            //                     },
+            //                     function handleResponse (data) {
+            //                         if (data) {
+            //                             console.log('Got back data: %s',JSON.stringify(data))
+            //                             //$popup.body.remove($loader);
+            //                             $popup.body.append($('<p>GOT DATA</p>'));
+            //                             $popup.body.append(
+            //                                 $('<pre>'+JSON.stringify(data)+'<pre>')
+            //                             );
+            //                         }
+            //                         else {
+            //                             console.log('Weird, still no data?');
+            //                         }
+            //                     }
+            //                 ) // end send message
+            //             }) // end button
+            //         ); // end append to button bar
+            //     }) // end import classroom button
+            // ); // end addToOptionBar
+        }], // end classroom assignment import
+
+
+        // Grade Imports
+	
+        [/staffGradeInputContainer.do/, function () {
+            addToOptionBar(
+                Button('Import Google Classroom Grades', ()=>{
+                    gcp = GoogleClassroomPicker(
+                        'Import Google Classroom Grades',
+                        (assignments)=>{
+
+                            function getName (name) {
+                                if (mytable.colHeaders.indexOf(name)>-1) {
+                                    return name
+                                }
+                                var matcher = new RegExp(name,'i')
+                                for (var i=0; i<mytable.rowHeaders.length; i++) {
+                                    if (matcher.exec(mytable.rowHeaders[i])) {
+                                        return mytable.rowHeaders[i]
+                                    }
+                                }
+                            }
+
+                            function getAssignment (encId) {
+                                var results = mytable.colHeaders.filter((h)=>h.indexOf(encId)==0)
+                                if (results.length > 1) {
+                                    console.log('WARNING: MORE THAN ONE ASSIGNMENT WITH SAME ID AAAAAAAAACCCCCK');
+                                    console.log(results)
+                                    console.log('Matching ID: %s',encId);
+                                }
+                                if (results) {return results[0]}
+                            }
+
+                            // Now let's do the actual import....
+                            mytable = TableObject(getAssignmentsFromGradebook()); // global
+                            var actions = assignments.map(
+                                (a)=>mytable.setCellDelayed(
+                                    getName(a.name), // row
+                                    getAssignment(a.encId),//column
+                                    a.grade// val
+                                    //comment - no need
+                                )
+                            );
+                            glactions = actions // global!
+                            console.log('Not working: here are some globals - mytable, asss, glactions');
+                            loopThroughActions(actions);
+
+                            
+                        },
+                        {getGrades:true}
+                    ); // end picker
+                }) // end Button
+            ); // end addToOptionBar
+        } // end classroom gradebook import
+        ],
+
+
 	[/staffGradeInputContainer.do/,function () {
 	    addToOptionBar(
 		Button('Import Grades for Multiple Classes',function () {
-		    console.log('Show import multi-grades UI');
+		    log('Show import multi-grades UI');
 		    $popup = makePopup();
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
 		    handler = csvFileHandler(
 			$input, // the element,
-			['Class','Student Name','Assignment Name','Grade','Comment'], // the fields
+			gradebookFields, //['Class','Student Name','Assignment Name','Grade','Comment'], // the fields
 			'Import Grades', // the action name,
+                        //importGradesFromCsvCallback
 			function (csvObj, doMap) { // the callback
-			    console.log('Got CSV Data: ',csvObj);
+			    log('Got CSV Data: ',csvObj);
 			    mytable = TableObject(getAssignmentsFromGradebook());
 			    mytable.showError = function (e) {
 				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
@@ -793,9 +1027,9 @@ function UserInterface () {
 				}
 				gradesByClass[classname].push(
 				    [doMap(csvrow,'Student Name'),
-				    doMap(csvrow,'Assignment Name'),
-				    doMap(csvrow,'Grade'),
-				    doMap(csvrow,'Comment')]
+				     doMap(csvrow,'Assignment Name'),
+				     doMap(csvrow,'Grade'),
+				     doMap(csvrow,'Comment')]
 				    // arguments to setCellDelayed...
 				)
 			    }
@@ -812,7 +1046,9 @@ function UserInterface () {
 			    $ul.append(
 				$('<pre>'+gradesByClass+'</pre>')
 			    );
-			    console.log('Here we go! MULTICLASS:'+gradesByClass);
+			    log('Here we go! MULTICLASS:'+gradesByClass);
+			    log('Remove popup?');
+			    $popup.remove();
 			}); // end handler creation :)
 		    $popup.buttonbar.prepend($input);
 		    $popup.buttonbar.append(handler.$buttonArea);
@@ -827,45 +1063,14 @@ function UserInterface () {
 	[/staffGradeInputContainer.do/,function () {
 	    addToOptionBar(
 		Button('Import Assignment Grades',function () {
-		    console.log('Show import grades UI');
-		    $popup = makePopup();
-	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
-		    handler = csvFileHandler(
+		    log('Show import grades UI');
+		    var $popup = makePopup();
+	            var $input = $('<input type="file" id="csvFileInput" accept=".csv">');
+		    var handler = csvFileHandler(
 			$input, // the element,
 			['Student Name','Assignment Name','Grade','Comment'], // the fields
 			'Import Grades', // the action name,
-			function (csvObj, doMap) { // the callback
-			    console.log('Got CSV Data: ',csvObj);
-			    mytable = TableObject(getAssignmentsFromGradebook());
-			    mytable.showError = function (e) {
-				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
-				if (! $popin.out) {$popin.doToggle()}
-			    }
-			    actions = []
-			    $popin = makePopin();
-			    $('body').append($popin);
-			    $popin.body.append('<h3>Importing</h3>');
-			    $ul = $('<ul></ul>');
-			    $popin.body.append($ul);
-			    for (var csvrow of csvObj) {
-				console.log('Appending to ul %s on %s',$ul,$popup);
-				$ul.append(
-				    $('<li>'+doMap(csvrow,'Student Name')+' '+doMap(csvrow,'Assignment Name')+'</li>')
-				);
-				actions.push(
-				    mytable.setCellDelayed(
-					doMap(csvrow,'Student Name'),
-					doMap(csvrow,'Assignment Name'),
-					doMap(csvrow,'Grade'),
-					doMap(csvrow,'Comment')
-				    )
-				);
-			    }
-			    $popup.hide();
-			    console.log('Here we go!');
-			    loopThroughActions(actions);
-			}
-		    ); // end handler creation :)
+                        importGradesFromCsvCallback);
 		    $popup.buttonbar.prepend($input);
 		    $popup.buttonbar.append(handler.$buttonArea);
 		    $popup.body.append(handler.$ui);
@@ -875,27 +1080,86 @@ function UserInterface () {
 		})
 	    );
 	}]
-	] // end urls...
+    ] // end urls...
+
+    // Here are some generics...
+    // For handling imports...
+    function importGradesFromCsvCallback (csvObj, doMap) { // the callback
+	log('Got CSV Data: ',csvObj);
+	mytable = TableObject(getAssignmentsFromGradebook());
+	mytable.showError = function (e) {
+	    $popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
+	    if (! $popin.out) {$popin.doToggle()}
+	}
+	actions = []
+	$popin = makePopin();
+	$('body').append($popin);
+	$popin.body.append('<h3>Importing</h3>');
+	$ul = $('<ul></ul>');
+	$popin.body.append($ul);
+	for (var csvrow of csvObj) {
+	    //log('Appending to ul %s on %s',$ul,$popup);
+	    $ul.append(
+		$('<li>'+doMap(csvrow,'Student Name')+' '+doMap(csvrow,'Assignment Name')+'</li>')
+	    );
+	    actions.push(
+		mytable.setCellDelayed(
+		    doMap(csvrow,'Student Name'),
+		    doMap(csvrow,'Assignment Name'),
+		    doMap(csvrow,'Grade'),
+		    doMap(csvrow,'Comment')
+		)
+	    );
+	}
+	$popin.hide();
+	log('Here we go!');
+	loopThroughActions(actions);
+    }
+
+    function importAssignmentsFromCsvCallback (csvObj, doMap) {
+	var assignments = []
+	for (var csvrow of csvObj) {
+	    var assignment = {}
+	    for (var f of assignmentFields) {
+		val = doMap(csvrow,f)
+		if (val) {
+		    assignment[f] = val;
+		}
+		else {
+		    log('No value for %s',f);
+		}
+	    }
+	    assignments.push(assignment);
+	}
+	log('Pushing assignments: %s',assignments);
+	addAssignmentsFromAssignmentsTab(assignments);
+    }
 
 
-    function csvFileHandler ($input, mapfields, actionLabel, actionCallback) {
-	// When file is uploaded to input, create a CSV mapper, then present
+    function csvDataHandler (mapfields, actionLabel, actionCallback) {
+        // Return an interface that can handle files or handle data.
+        // create a CSV mapper, then present
 	// button with actionLabel which results in actionCallback being called
 	// with two arguments:
 	// actionCallback(csvDataAsArrayofObjects, MapperFunctionToGoFromMapfieldToCSVField)
 	// the mapper function takes the form...
 	// doMap(CSVROW,FIELDNAME) -> VALUE
-	obj = {}
+        console.log('csvDataHandler got args:  %s %s %s',mapfields,actionLabel,actionCallback);
+	var obj = {}
 	obj.$ui = $('<div>');
 	obj.$buttonArea = $('<span>');
-	var mapper
-	function handleData (e) {
-	    var input = e.target.result
-	    csvObj = $.csv.toObjects(input); // GLOBAL for debugging :)
-	    console.log('Got CSV OBJ %s!',csvObj);
+	var mapper;
+        
+        function handleEvent (d) {
+	    var input = e.target.result;
+            handleData(input);
+        }
+
+        function handleCsv (csvObj) {
+	    log('Got CSV OBJ %s!',csvObj);
 	    var fields = [];
 	    for (var field in csvObj[0]) {fields.push(field)};
-	    mapper = makeCSVMapper(mapfields,fields) // global
+	    mapper = makeCSVMapper(mapfields,fields) 
 	    obj.$ui.append(mapper.$div);
 	    obj.$buttonArea.append(Button(
 		actionLabel,
@@ -904,25 +1168,51 @@ function UserInterface () {
 		    actionCallback(csvObj,doMap);
 		}));
 	    mapper.finishUI();
-	    console.log('Finish UI!');
-	}
+	    log('Finish UI!');
+        }
 
+	function handleData (input) {
+	    csvObj = $.csv.toObjects(input);
+            return handleCsv(csvObj);
+	}
 
 	function handleFiles (files) {
-	    console.log('got files: %s',files);
+	    log('got files: %s',files);
 	    var file = files[0]
 	    var reader = new FileReader();
-	    reader.onload = handleData;
+	    reader.onload = handleEvent;
 	    reader.readAsText(file);
 	}
+        
+        obj.handleFiles = handleFiles;
+        obj.handleData = handleData;
+        obj.handleCsv = handleCsv;
 
-	$input.change(function () {handleFiles(this.files)});
+        console.log('Creating data handler: %s',obj);
+        globobj = obj;
+        console.log('debugging object: globobj');
+        return obj;
+        
+    }
+
+    
+    function csvFileHandler ($input, mapfields, actionLabel, actionCallback) {
+	// When file is uploaded to input, create a CSV mapper, then present
+	// button with actionLabel which results in actionCallback being called
+	// with two arguments:
+	// actionCallback(csvDataAsArrayofObjects, MapperFunctionToGoFromMapfieldToCSVField)
+	// the mapper function takes the form...
+	// doMap(CSVROW,FIELDNAME) -> VALUE
+	var obj = csvDataHandler(mapfields, actionLabel, actionCallback);
+	$input.change(function () {obj.handleFiles(this.files)});
 	obj.$input = $input;
+        console.log("CREATED FILE HANDLER %s",obj);
 	return obj
     }
 
 
     function makeCSVMapper (labels, valueOptions) {
+        console.log('Make mapper %s %s',labels,valueOptions);
 	mid = 'aa-select-'+mid_increment
 	mid_increment += 1;
 
@@ -933,8 +1223,8 @@ function UserInterface () {
 		    function (idx,fs) {
 			var name = $(fs).attr('value')
 			data[name] = $($(fs)
-						      .find('select')[0]
-						      .selectedOptions[0]).attr('value')
+				       .find('select')[0]
+				       .selectedOptions[0]).attr('value')
 			if (data[name]=='::other') {
 			    // in this case, grab the value of the input...
 			    data[name] = '::'+$(fs).find('input.aaother').val();
@@ -961,7 +1251,7 @@ function UserInterface () {
 		self = this;
 		self.$div = $('<div class="aa-mapper" id="'+mid+'">');
 		self.$select = $('<select class="aa-field-select"><option value="">-</option></select>');
-		console.log('Got select: %s',self.$select);
+		log('Got select: %s',self.$select);
 		valueOptions.forEach(function (f) {self.$select.append('<option value="'+f+'">'+f+'</option>')});
 		$other = $('<option value="::other">::Other</option>');			    
 		self.$select.append($other);
@@ -977,9 +1267,9 @@ function UserInterface () {
 		$('#'+mid+' .fieldSelector').append(self.$select);
 		$('#'+mid+' .fieldSelector').append($('<input class="aaother" type="text">').hide());
 		$('#'+mid+' .fieldSelector select').change(function () {
-		    console.log('Changed value!');
+		    log('Changed value!');
 		    if (this.value=='::other') {
-			console.log('show other');
+			log('show other');
 			$(this).next('input.aaother').show()
 		    }
 		}); // end change
@@ -988,15 +1278,15 @@ function UserInterface () {
 		    $(fs).find('option').each(
 			function (idx, o) {
 			    var v = $(o).val()
-			    console.log("Check %s against %s",header,v);
+			    //log("Check %s against %s",header,v);
 			    if (header && v) {
 				if (v.indexOf(header)>-1||header.indexOf(v)>-1) {
 				    fs.selected = v;
-				    console.log('We better select this baby!');
+				    log('We better select this baby!');
 				    select = $(fs).children('select')[0];
 				    select.value = v; select.selected = v;
-				    console.log('Set alue to: %s',v);
-				    console.log('Set selected to %s',v)
+				    log('Set value to: %s',v);
+				    log('Set selected to %s',v)
 				}
 			    }
 			});
@@ -1008,7 +1298,7 @@ function UserInterface () {
 	    Mapper.buildUI()
 	}
 	catch (e) {
-	    console.log('Error: %s',e);
+	    log('Error: %s',e);
 	}
 	return Mapper
     }
@@ -1035,7 +1325,7 @@ function UserInterface () {
 	$popin.css({'right':'-100px'})
 	return $popin;
     }
-	 
+
     function makePopup () {
 	var $popup = $('<div class="aa-popup"><div class="aa-buttonbar"></div></div>');
 	$body = $('<div class="aa-body"></div>');
@@ -1065,12 +1355,12 @@ function UserInterface () {
 	function checkForLoad () {
 	    if ($('#progressMeterWindow:visible').length) {
 		shown = false;
-		console.log('Waiting for load...');
+		log('Waiting for load...');
 	    }
 	    else if (shown==false) {
 		shown = true;
 		doAdd(el);
-		console.log('Done loading: add UI');
+		log('Done loading: add UI');
 	    }
 	    setTimeout(checkForLoad,500);
 	}
@@ -1100,34 +1390,222 @@ function UserInterface () {
     self.updateInterface = function () {
 	var ff = self.getUrlActions(document.URL);
 	if (ff) {
-	    console.log('Found %s interfaces for: %s',ff.length,document.URL);
+	    log('Found %s interfaces for: %s',ff.length,document.URL);
 	    for (var f of ff) {f()}
 	}
 	else {
-	    console.log('No interface for: %s',document.URL);
+	    log('No interface for: %s',document.URL);
 	}
     }
+
+
+    /* Functions to load and confirm outside data sources */
+    self.loadAssignmentData = function (data) {
+        console.log("GOTDATA: %s",JSON.stringify(data));
+        var $popup = makePopup();
+        var dh = csvDataHandler(
+            assignmentFields,
+            'Import Assignments',
+            importAssignmentsFromCsvCallback
+        );
+	$popup.buttonbar.append(dh.$buttonArea);
+	$popup.body.append(
+	    dh.$ui
+	);
+        dh.handleData(data);
+    }
+    
+    self.loadGradeData = function (data) {
+        var $popup = makePopup();
+        var dh = csvDataHandler(
+            gradebookFields,
+            'Import Grades',
+            importGradesFromCsvCallback
+        );
+	$popup.buttonbar.append(dh.$buttonArea);
+	$popup.body.append(
+	    dh.$ui
+	);        
+        dh.handleData(data);
+    }
+
+
+    function GoogleClassroomPicker (header, cb, params) {
+        _lastClass = ''
+        if (!params) {params = {getGrades : false}}
+        var obj = {
+            popup : $popup,
+
+            getSelectedClass : function () {
+                var checkedBoxes = $('input[name="aa-google-course"]:checked');
+                if (checkedBoxes[0]) {
+                    _lastClass = obj.loadedClasses[checkedBoxes[0].value]
+                    return _lastClass
+                }
+                else {
+                    return _lastClass
+                }
+            },
+            getSelectedAssignments : function () {
+                return $('input[name="aa-google-assignment"]:checked').map(function () {return obj.loadedAssignments[this.value]}).get()
+            },
+            getGradesForClass : function () {
+            },
+            fetchClasses : fetchClasses,
+            loadedClasses : false,
+            loadedAssignments : false,
+            loadedGrades : false,
+        }
+        var $popup = makePopup();
+        var $actionButton;
+        var $waiting = $(`<div><h2>${header}</h2>
+    <h3>Loading Classes from Google...</h3>
+    <p>In just a second this will have something useful.
+    </p></div>`);
+        $popup.body.append($waiting);
+        
+        fetchClasses()
+        return obj
+
+
+        function fetchGrades () {
+            var course = obj.getSelectedClass();
+            var assignments = obj.getSelectedAssignments();
+            $popup.body.empty();
+            $popup.body.append(`<div><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div>`);
+            chrome.runtime.sendMessage(
+                {mode:'classroom',
+                 method:'listSubmissions',
+                 course:course.id,
+                 assignments:assignments.map((a)=>a.id),
+                },
+                function (assessmentData) {
+                    console.log('Got grades! %s',assessmentData);
+                    asss = assessmentData; // gloabl for debug
+                    $popup.body.append(`<p>${assessmentData.join('<br>')}</p>`);
+                    $popup.body.append('<h4>FIXME</h4>')
+                    $popup.hide()
+                    cb(assessmentData);
+                }
+            );
+        }
+
+        function fetchAssignments () {
+            var course = obj.getSelectedClass()
+            $popup.body.empty();
+            $popup.body.append(`<div><h2>${header}</h2>
+                <h3>Fetching assignment data...</h3>
+                <p>Fetching assignment data for class ${course.name} (${course.id})</p>
+                <p>...</p>
+             </div>`);
+            chrome.runtime.sendMessage(
+                {mode:'classroom',
+                 method:'listGradedAssignments',
+                 params : {
+                     id : course.id
+                 }},
+                function (assignmentData) {
+                    assignmentD = assignmentData
+                    console.log('Storing asignment data in assignmentD global for inspection....');
+                    $popup.body.empty();
+                    obj.loadedAssignments = {}
+                    assignmentData.forEach((cw)=>obj.loadedAssignments[cw.id]=cw);
+                    $popup.body.append(AssignmentPicker(assignmentData));
+                    $actionButton.remove();
+                    $actionButton = Button('Select',()=>{
+                        if (params.getGrades) {
+                            fetchGrades();
+                        }
+                        else {
+                            // Callback with just assignment list
+                            cb(obj.getSelectedAssignments())
+                        }
+                    });
+                    $popup.buttonbar.append($actionButton);
+                }
+            );
+        }
+
+        function fetchClasses () {
+            chrome.runtime.sendMessage(
+                {mode:'classroom',
+                 method:'listCourses',
+                },
+                function handleResponse (data) {
+                    var $coursePicker = CoursePicker(data);
+                    $waiting.remove();
+                    $popup.body.append($coursePicker);
+                    obj.loadedClasses = {};
+                    data.courses.forEach((c)=>obj.loadedClasses[c.id]=c);
+                    $actionButton = Button('Load Assignments',fetchAssignments)
+                    $popup.buttonbar.append($actionButton);
+                }
+            );
+        }
+
+        function CoursePicker (data) {
+            courseData = data; // global!
+            var $picker = $(`<div><h2>${header}</h2><h3>Pick Google Classroom</h3></div>`);
+            var $courseList = $('<ul></ul>');
+            $picker.append($courseList);
+            data.courses.forEach(
+                (c)=>{
+                    $courseList.append($(`<li><input name="aa-google-course" type="checkbox" class="aa-course-picker" value="${c.id}"> <b><a href="${c.alternateLink}" target="_BLANK">${c.name}</a></b></li>`));
+                });
+            return $picker;
+        }
+
+        function AssignmentPicker (data) {
+            var $picker = $('<div><h3>Pick Assignments to Load</h3></div>');
+            var $ul = $('<ul></ul>')
+            $picker.append($ul);
+            
+            data.forEach((cw)=>{
+                $ul.append($(`<li><input name="aa-google-assignment" type="checkbox" class="aa-google-assignment" value="${cw.id}">
+                               <b><a href="${cw.alternateLink}">${cw.title}</a> </b>  Due ${cw.dueDate && cw.dueDate.month}/${cw.dueDate && cw.dueDate.day} ${cw.maxPoints}pts.
+                               <br><small>(i.e. ${cw.aspenShort}: ${cw.aspenLong})</small></li>`));
+            });
+            return $picker;
+        }
+        
+    }
+
+
 
     return self;
 } // end UserInterface
 
-    
 
 
 
-function Poller () {
+// Poller - where we get actions registered with us!
+// This one is rather important :)
+
+function Poller (ui) {
 
     var self = {}
 
     self.doAction = function (action) {
-	console.log('Do action %s',JSON.stringify(action));
+	log('Do action %s',JSON.stringify(action));
 	switch (action.name) {
+        case "sendAssignmentData":
+            console.log('Got data: %s',action.data);
+            globact = action.data
+            ui.loadAssignmentData(action.data.text);
+            self.complete(action);
+            break;
+        case "sendGradeData":
+            console.log('Got data: %s',action.data);
+            globact = action.data;
+            ui.loadGradeData(action.data.text);
+            self.complete(action);
+            break;
 	case "comment":
 	    commentAction(action.main,action.private);
 	    chrome.runtime.sendMessage({'mode':'complete',
 					'url':document.URL,
 					'action':action,
-				       },function () {console.log('Completed!');}
+				       },function () {log('Completed!');}
 				      );
 	    break;
 	case "writeText":
@@ -1135,17 +1613,28 @@ function Poller () {
 	    chrome.runtime.sendMessage({'mode':'complete',
 					'url':document.URL,
 					'action':action,
-				       },function () {console.log('Completed!');}
-				      );
+				       },function () {log('Completed!');}
+                                      );
 	    break;
+
+	case "createAssignments":
+	    // Register multiple assignments :)
+	    log('Got action: create multiple assignments %s',action.data);
+	    addAssignmentsFromAssignmentsTab(
+		action.data,
+		action.next
+		//true, // multi-mode...
+	    );
+	    break;
+
 	case "createAssignment":
-	    console.log('Got action: createAssignment %s',JSON.stringify(action));
+	    log('Got action: createAssignment %s',JSON.stringify(action));
 	    var actions = getFillOutAssignmentActions(action.assignment);
 	    var finishIt = function () {
-		console.log('Sending complete signal %s',action);
+		log('Sending complete signal %s',action);
 		chrome.runtime.sendMessage({'mode':'complete',
 					    'url':document.URL,
-					    'action':action},function () {console.log('Completed async')});
+					    'action':action},function () {log('Completed async')});
 	    }
 	    // insert our action... 
 	    var lastAct = actions[actions.length-1]
@@ -1156,14 +1645,19 @@ function Poller () {
 
 
 	case "selectClass":
-	    console.log('selectClass %s',action);
+	        log('selectClass %s',action);
 	    self.complete(action); // complete first so we know the code runs :)
 	    selectClass(action.classname)
 	    break;
 
+	case "switchClass":
+	    self.complete(action);
+	    switchClass(action.classname,action.next)
+	    topTabAction('Gradebook');
+	    break;
 
 	case "sideTab":
-	    console.log("sideTab %s',action");
+	    log("sideTab %s',action");
 	    self.complete(action); // complete first so we know the code runs :)
 	    sideTab(action.tab).click();
 	    break;
@@ -1171,50 +1665,48 @@ function Poller () {
 
 	case "multiClass":
 	    var found;
-	    console.log("multiClass action %s",action);
-	    var curClass = getCurrentClass();
-	    for (var classname in action.data) {
-		if (curClass.search(classname)>-1) {
-		    curClass = classname
-		    found = true;
-		}
-	    }
+	    log("multiClass action %s",JSON.stringify(Object.keys(action)));
+	    var curClass = getCurrentClassFromKeys(action.data)
+	    found = curClass && true || false;
 	    var actions = []
 	    if (found && action.data[curClass] && action.data[curClass].length > 0) {
-		console.log('We have data to enter for this class! %s',curClass)
-		console.log('Data: ',action.data[curClass]);
+		log('We have data to enter for this class! %s',curClass)
+		log('%s rows of data: ',action.data[curClass].length);
+		log('Wait a sec...');
 		setTimeout(function () {
-		setGrademodeAll(
-		    function () {
-		    mytable = TableObject(getAssignmentsFromGradebook());
-		    for (var i=0; i<action.data[curClass].length; i++) {
-			var row = action.data[curClass][i]
-			console.log('Working with data: %s',row);
-			actions.push(mytable.setCellDelayed.apply(this,row));
-		    }
-		    action.data[curClass] = false; // done!
-		    actions.push(DelayedAction(
+		    log('Go!');
+		    setGrademodeAll(
 			function () {
-			    // register for more...
-			    chrome.runtime.sendMessage({
-				mode:'register',
-				url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
-				action:{name:'multiClass',
-					data:action.data}
-			    });
-			},
-			function () {return true}
-		    ));
-		    self.complete(action)
-		    loopThroughActions(actions)
-		    });
-		},1000);
+			    mytable = TableObject(getAssignmentsFromGradebook());
+			    log('Entering grade data: %s',action.data[curClass]);
+			    for (var i=0; i<action.data[curClass].length; i++) {
+				var row = action.data[curClass][i]
+				log('Working with data: %s',row);
+				actions.push(mytable.setCellDelayed.apply(this,row));
+			    }
+			    action.data[curClass] = false; // done!
+			    actions.push(DelayedAction(
+				function () {
+				    // register for more...
+				    chrome.runtime.sendMessage({
+					mode:'register',
+					url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
+					action:{name:'multiClass',
+						data:action.data}
+				    });
+				},
+				function () {return true}
+			    ));
+			    self.complete(action)
+			    loopThroughActions(actions)
+			});
+		},3000); // 3 second wait
 	    }
 	    else {
-		console.log('No data for this class: %s',curClass);
+		log('No data for this class: %s',curClass);
 		for (var classname in action.data) {
 		    if (action.data[classname].length>0) {
-			console.log('Switch to %s to complete %s rows',classname,action.data[classname].length);
+			log('Switch to %s to complete %s rows',classname,action.data[classname].length);
 			chrome.runtime.sendMessage({
 			    mode:'register',
 			    url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
@@ -1222,20 +1714,66 @@ function Poller () {
 				    data:action.data}
 			});
 			self.complete(action);
-			switchClass(classname);
+			setTimeout(
+			    ()=>switchClass(classname),3000 // wait before advancing...
+			);
 			return;
 		    }
 		}
-		console.log('Weird, we made it to this part of the loop without switching...')
+		log('Weird, we made it to this part of the loop without switching...')
 		self.complete(action);
 	    }
 	    // end multiClass
 	    break;
+	case "multiAssignments":
+	    var curClass = getCurrentClassFromKeys(action.data);
+
+	    if (action.data[curClass]) {
+		// Great, Let's add this class
+		var curClassData = action.data[curClass];
+		delete action.data[curClass] // remove curClass from data...
+		log('Register data for %s',curClass);
+		chrome.runtime.sendMessage({
+		    mode:'register',
+		    url:'gradebook.classes.list.gcd',
+		    action:{
+			name:'createAssignments',
+			data:curClassData,
+			next:{
+			    // And after we'll call ourselves again w/ the rest of our data...
+			    name:'multiAssignments',
+			    data:action.data
+			}
+		    }
+		});
+	    }
+	    else {
+		// Ok -- we have to switch classes then...
+		var classes = Object.keys(action.data);
+		if (classes) {
+		    // Register to do this thing again...
+		    chrome.runtime.sendMessage({
+			note:'Re-registering for after the switch!',
+			mode:'register',
+			url:'gradebook.classes.list.gcd',
+			action : {...action}
+		    });
+		    log('Switch to %s',classes[0]);
+		    switchClass(classes[0],'assignments');
+		    // DO NOT COMPLETE...
+		    return
+		}
+		else {
+		    log('Apparenty we are done!');
+		}
+	    }
+	    self.complete(action) // Finally, let us complete
+	    break;
 
 
 	default:
-	    console.log('No handler for action: %s',action.name);
-	    console.log('Complete action: %s',JSON.stringify(action));
+	    log('No handler for action: %s',action.name);
+	    log('Complete action: %s',JSON.stringify(action));
 	} // end switch
     }
 
@@ -1259,7 +1797,7 @@ function Poller () {
 		}
 		else {
 		    if (action) {
-			console.log('ACTION! Got new action to do: %s',JSON.stringify(action));
+			log('ACTION! Got new action to do: %s',JSON.stringify(action));
 			self.doAction(action)
 		    }
 		}
@@ -1278,10 +1816,11 @@ $(document).ready(function () {
 
     // We need to poll universally...
 
-    var p = Poller()
+    var ui = UserInterface()
+    var p = Poller(ui)
     p.runPoll()
 
-    var ui = UserInterface()
+
     setTimeout(ui.updateInterface,500); // delay :)
     
     // // if (document.URL.indexOf('common/scFrameContent.html')>1) {
@@ -1293,7 +1832,7 @@ $(document).ready(function () {
     // // 		$('body').append(commentContent);
     // // 	    }
 
-	
+    
     // // }
     // // else {
     // function addButton (txt, callback) {
@@ -1310,7 +1849,7 @@ $(document).ready(function () {
     // addButton('Save',doSave)
     // addButton('Grab Grade Table',function () {
     // 	mytable = TableObject(getAssignmentsFromGradebook()); // GLOBAL
-    // 	console.log('Test setting value :)');
+    // 	log('Test setting value :)');
     // 	mytable.setCell('Apostolos, Haley','test','B+')
     // 	mytable.setCell('Brody, Jocelyn','test','C+')
     // 	mytable.setCell('Lennon, Keegan','test','B-')
@@ -1339,27 +1878,44 @@ $(document).ready(function () {
 
 //select class...
 function selectClass (classname) {
-    console.log('selectClass(%s)',classname);
+    log('selectClass(%s)',classname);
     $('#dataGrid a:contains("'+classname+'")')[0].click();    
 }
 
-function switchClass (classname) {    
-    console.log('Switching class to %s',classname);
-    
-    console.log('Register listeners to switch to class');
+function switchClass (classname, nextUp='scores') {    
+    log('Switching class to %s',classname);
+    log('Register listeners to switch to class');
     chrome.runtime.sendMessage({
 	'mode':'register',
 	'url':'gradebookClassList.do?navkey=gradebook.classes.list',
 	'action':{'name':'selectClass',
 		  'classname':classname}
     });
-    console.log('Register listener to switch to gradebook');
-    chrome.runtime.sendMessage({
-	mode:'register',
-	url:'gradebook.classes.list.detail',
-	action: {name:'sideTab',
-		 tab:'Scores'}
-    });
-    console.log('switch to gradebook');
-    topTabAction('Gradebook').click();;
+    if (nextUp=='scores') {
+	log('Register listener to switch to gradebook');
+	chrome.runtime.sendMessage({
+	    mode:'register',
+	    url:'gradebook.classes.list.detail',
+	    action: {name:'sideTab',
+		     tab:'Scores'}
+	});
+	log('switch to gradebook');
+	topTabAction('Gradebook').click();;
+    }
+    if (nextUp=='assignments') {
+	log('Register listener to switch to gradebook');
+	chrome.runtime.sendMessage({
+	    mode:'register',
+	    url:'gradebook.classes.list.detail',
+	    action: {name:'sideTab',
+		     tab:'Assignment'}
+	});
+	log('switch to gradebook');
+	topTabAction('Gradebook').click();;
+
+    }
+}
+
+function dateToAspenDate (dateObj) {
+    return dateObj.getMonth()+1 + '/' + dateObj.getDate() + '/' + (dateObj.getYear()+1900);
 }
