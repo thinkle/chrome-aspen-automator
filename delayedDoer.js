@@ -1,6 +1,9 @@
 console.log('Loading delayedDoer');
 function doAction (action, completionChecker, nextAction) {
-    try {action()}
+    try {
+	console.log('Run action: %s',action);
+	action()
+    }
     catch (err) {
 	console.log('trouble calling %s',action);
 	console.log('err=%s',err)
@@ -24,7 +27,7 @@ function DelayedAction (action, check, nextAction) {
     return obj
 }
 
-function GenericDelayedAction (action, nextAction) {
+function GenericDelayedAction (action) {
     var obj = DelayedAction(action, 
 			function () {
 			    return obj.complete;
@@ -32,6 +35,12 @@ function GenericDelayedAction (action, nextAction) {
     obj.complete = false;
     obj.finishAction = function () {obj.complete = true;};
     return obj
+}
+
+function DelayedTimerAction (action, delay) {
+    var a = GenericDelayedAction(action);
+    setTimeout(delay,a.finishAction);
+    return a;
 }
 
 
