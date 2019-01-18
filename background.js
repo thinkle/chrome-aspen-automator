@@ -1,7 +1,50 @@
+/**** Let's explain how the fuck this thing works...
+
+Action tracker basically listens here...
+
+We get requests from the extension which are objects and which we relay back...
+
+{mode: MODE,
+ action : ACTION,
+ context: CONTEXT,
+ url : URL }
+
+This allows the front end to plan actions that will happen at certain
+URLs etc. -- in other words, it allows a chain of actions to survive a
+page reload.
+
+The process begins with:
+
+{mode: register...} -> This is how the front end registers an action to be taken in the future.
+
+The next step is
+
+{mode : get...} -> This is how the front end requests the next action to do
+
+Once the front end has carried out an action, it calls:
+
+{mode : complete} -> This is how the front end signals it is DONE with an action.
+
+
+Also, delays can be triggered with 
+{mode : wait, waitlist: [{url:URL},...]} - which either waits for us to have been through a URL before it triggers completion
+
+The front end can also request an action be triggered AGAIN with 
+{mode : reset}
+
+Or the front end can trigger us to SKIP an action with
+{mode :skip}
+
+
+
+
+****/
+
 function ActionTracker  () {
 
     var data = {}
     var url_matchers = {}
+
 
     function getUrlMatch (url) {
 	for (var pattern in url_matchers) {
@@ -12,7 +55,6 @@ function ActionTracker  () {
     }
 
     var self = {
-    
 	getAction : function (context, url) {
 	    if (!context) {
 		context = url_matchers[url]
@@ -65,6 +107,23 @@ function ActionTracker  () {
 		    return next
 		}
 	    }
+	},
+
+	skipAction : function (context, url) {
+	    var action = self.getAction(context,url);
+	    action.inprogress = [] // set to nothing...
+	},
+
+	resetAction : function (context, url) {
+	    var action = self.getAction(context,url);
+            if (action.inprogress) {
+	        var newqueue = action.inprogress.concat(action.queue)
+	        action.inprogress = [];
+	        action.queue = newqueue;
+            }
+            else {
+                console.log('resetAction called, but we have nothing in progress.');
+            }
 	},
 
 	isEmpty : function (context,url) {
@@ -127,6 +186,19 @@ chrome.runtime.onMessage.addListener(
 	  var action = actions.startAction(request.context,request.url);
 	  if (action) {console.log('Got action %s',JSON.stringify(action));}
 	  sendResponse(action);
+	  break;
+      case 'log':
+	  console.log('Got log %s',request.arguments.length);
+	  request.arguments[0] = 'FRONTEND: '+request.arguments[0]+' (CONTEXT: '+request.context+')';
+	  console.log.apply(this,[request.arguments[0],request.arguments[1],request.arguments[2]]);
+	  //console.log.apply(this,request.arguments);
+          break;
+      case 'reset':
+	  actions.resetAction(request.context,request.url);
+	  break;
+      case 'skip':
+	  actions.skipAction(request.context,request.url);
+	  // skip the current action for this URL
 	  break;
       case 'complete':
 	  console.log('Complete action %s %s %s',JSON.stringify(request.action), request.context, request.url);
