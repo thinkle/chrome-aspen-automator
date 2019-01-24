@@ -1,3 +1,14 @@
+// Delay we add when needed for X2 to do its thing (in milliseconds)
+var DELAY = 5000;
+
+// Variables and such...
+
+gft = {} // globals for testing -- bad :) - just shove stuff in here to see it easily in the console
+var mid_increment = 1 // For keeping track of new class/id names we append
+var prefs = Prefs(['customStyle']);
+
+// Convenience functions...
+
 function log () {
     console.log.apply(this,arguments);
     chrome.runtime.sendMessage({
@@ -17,19 +28,12 @@ async function demo() {
     log('Two second later');
 }
 
-
-//DELAY = 500;
-DELAY = 5000;
-
-//$('body').prepend('HELLO WORLD');
-
-mid_increment = 1
+// Convenience functions for automating browser actions in X2...
 
 function remoteControlTest () {
     log('Remote Control Test');
     $(':contains("Add Assignment")').click()
 }
-
 
 function simulateKeyPress (character, element) {
     var keyboardEvent = document.createEvent("KeyboardEvent");
@@ -49,7 +53,9 @@ function simulateKeyPress (character, element) {
     element.dispatchEvent(keyboardEvent);
 }
 
-gft = {} // globals for testing -- bad :)
+function dateToAspenDate (dateObj) {
+    return dateObj.getMonth()+1 + '/' + dateObj.getDate() + '/' + (dateObj.getYear()+1900);
+}
 
 function setValue (lab, val) {
     getValueSetter().action()
@@ -192,7 +198,6 @@ function getCurrentClassFromKeys (obj) {
     }
 }
 
-
 function setGrademodeAll (after) {
     var sel = $('select[name="columnFieldSetOid"]')
     var el = sel[0]
@@ -217,7 +222,6 @@ function setGrademodeAll (after) {
     log('Run next thing...');
     after()
 }
-
 
 function testTableSet () {
     setValue('Category','WH');
@@ -595,8 +599,6 @@ function testAddAssignments () {
     );
 }
 
-
-
 // Navigation functions for X2...
 function topTabAction (tabName) {
     var $el = $("#header a:contains('"+tabName+"')")
@@ -679,7 +681,8 @@ function testMessaging () {
     // for (var a of actions ) {registerAnAction(a)}
 }
 
-
+/* Our own user interface which gets added to X2 URLs as follows...
+*/
 function UserInterface () {
 
     var self = {}
@@ -700,6 +703,7 @@ function UserInterface () {
 		myBrand.append(
 		    Button('Toggle Custom Style', function () {
 			$('body').toggleClass('aa-custom-style');
+                        prefs.set('customStyle',$('body').hasClass('aa-custom-style'));
 		    }));
 		var $popup = makePopup()
 		$popup.body.append(myBrand);
@@ -708,27 +712,33 @@ function UserInterface () {
 	    $('.applicationTitle').closest('table').css({'width':'650px'});
 	}],
 	[/.*/, function () {
-	    b1 = Button('Retry-Action',function () {
+	    b1 = Button('⟳',function () {
 		chrome.runtime.sendMessage({
 		    mode:'reset',
 		    url:document.URL,
 		});
 	    });
-	    b2 = Button('Skip Action',function () {
+	    b2 = Button('▶▶',function () { // skip action unicode
 		chrome.runtime.sendMessage({
 		    mode:'skip',
 		    url:document.URL
 		})
 	    }); // end button 2
 
-
-	    $td = $('<td>')
-	    $td.append(b1); $td.append(b2);
-	    $('#contextMenu').parent().before($td);
+            var $appTitle = $('.applicationTitle')
+            $appTitle.append(b1);
+            $appTitle.append(b2);
+            $appTitle.closest('table').css({'width':'750px'});
+            /*
+	    $td = $('<td style="min-width:84px">')
+	    $td.append(b1);
+            $td.append('&nbsp;');
+            $td.append(b2);
+	    $('#contextMenu').parent().before($td);*/
 	}],
 	// TEST CODE
-	[/.*/, function () {
-	    b3 = Button('Test CSV',function () {
+	//[/.*/, function () {
+	/*    b3 = Button('Test CSV',function () {
                 var $popup = makePopup();
                 var dh = csvDataHandler(
                     ['Category','GB column name'],
@@ -757,7 +767,7 @@ function UserInterface () {
 	    // $('#contextMenu').parent().before($td)
 
 	}],
-
+        */
 	// REMOVE TEST CODE SOON
 	[/assignmentList.do/,function () {
 	    handleFiles = function (files) {
@@ -894,7 +904,7 @@ function UserInterface () {
                                 a['Total points'] = a.maxPoints;
                                 a['Extra credit points'] = 0;
                                 a['Grade Scale'] = 'Current High School Grade Scale';
-                                a['Grade Term'] = 'S1';
+                                a['Grade Term'] = 'S2';
                             });
                             console.log('Now let\'s import them!')
                             addAssignmentsFromAssignmentsTab(assignments);
@@ -997,29 +1007,29 @@ function UserInterface () {
 
 	[/staffGradeInputContainer.do/,function () {
 	    addToOptionBar(
-		Button('Import Grades for Multiple Classes',function () {
+		Button('CSV (Many Classes)',function () {
 		    log('Show import multi-grades UI');
-		    $popup = makePopup();
-	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
-		    handler = csvFileHandler(
+		    var $popup = makePopup();
+	            var $input = $('<input type="file" id="csvFileInput" accept=".csv">');
+		    var handler = csvFileHandler(
 			$input, // the element,
 			gradebookFields, //['Class','Student Name','Assignment Name','Grade','Comment'], // the fields
 			'Import Grades', // the action name,
                         //importGradesFromCsvCallback
 			function (csvObj, doMap) { // the callback
 			    log('Got CSV Data: ',csvObj);
-			    mytable = TableObject(getAssignmentsFromGradebook());
+			    var mytable = TableObject(getAssignmentsFromGradebook());
 			    mytable.showError = function (e) {
 				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
 				if (! $popin.out) {$popin.doToggle()}
 			    }
-			    actions = []
-			    $popin = makePopin();
+			    var actions = []
+			    var $popin = makePopin();
 			    $('body').append($popin);
 			    $popin.body.append('<h3>Importing</h3>');
-			    $ul = $('<ul></ul>');
+			    var $ul = $('<ul></ul>');
 			    $popin.body.append($ul);
-			    gradesByClass = {}
+			    var gradesByClass = {}
 			    for (var csvrow of csvObj) {
 				var classname = doMap(csvrow,'Class'); // grab class
 				if (!gradesByClass[classname]) {
@@ -1213,10 +1223,10 @@ function UserInterface () {
 
     function makeCSVMapper (labels, valueOptions) {
         console.log('Make mapper %s %s',labels,valueOptions);
-	mid = 'aa-select-'+mid_increment
+	var mid = 'aa-select-'+mid_increment
 	mid_increment += 1;
 
-	Mapper = {
+	var Mapper = {
 	    getData : function () {
 		var data = {}
 		self.$div.find('.fieldSelector').each(
@@ -1346,7 +1356,9 @@ function UserInterface () {
 	function doAdd (el) {
 	    var $optionCells = $('.optionsBar > tbody > tr > td')
 	    var $buttonCell = $($optionCells[$optionCells.length-2])
-	    $td = $('<td></td>');
+            $spacer = $('<td width="1"><img src="images/spacer.gif" height="1" width="7"></td>');
+	    $td = $('<td class="aa-option-cell"></td>');
+            $td.append($spacer);
 	    $td.append(el)
 	    $buttonCell.after($td);
 	}
@@ -1405,7 +1417,7 @@ function UserInterface () {
         var $popup = makePopup();
         var dh = csvDataHandler(
             assignmentFields,
-            'Import Assignments',
+            'CSV',
             importAssignmentsFromCsvCallback
         );
 	$popup.buttonbar.append(dh.$buttonArea);
@@ -1431,7 +1443,7 @@ function UserInterface () {
 
 
     function GoogleClassroomPicker (header, cb, params) {
-        _lastClass = ''
+        var _lastClass = ''
         if (!params) {params = {getGrades : false}}
         var obj = {
             popup : $popup,
@@ -1810,12 +1822,35 @@ function Poller (ui) {
 
 
 
+// JQuery code to inject our UI
 $(document).ready(function () {
 
+    /* CSS Extras */
+
+    /* Grab our fonts from google for CSS good measure... */
+    $('head').append($('<link href="https://fonts.googleapis.com/css?family=Bitter|Lato|Ubuntu|Sarabun" rel="stylesheet">'));
+    $('div:contains("District view")').closest('table').addClass('districtView')
+    $('div:contains("School view")').closest('table').addClass('schoolView')
+    $('div:contains("Staff view")').closest('table').addClass('staffView')
+    $('div:contains("Build view")').closest('table').addClass('buildView')
+    $('div:contains("Family view")').closest('table').addClass('familyView')
+    $('div:contains("Student view")').closest('table').addClass('studentView')
 
 
+
+    prefs.ready(
+        ()=>{
+            if (prefs.get('customStyle')) {
+                console.log('Apply custom style');
+                $('body').addClass('aa-custom-style');
+            }
+            else {
+                console.log('Not bothering with custom style');
+            }
+            
+        }
+    );
     // We need to poll universally...
-
     var ui = UserInterface()
     var p = Poller(ui)
     p.runPoll()
@@ -1916,6 +1951,83 @@ function switchClass (classname, nextUp='scores') {
     }
 }
 
-function dateToAspenDate (dateObj) {
-    return dateObj.getMonth()+1 + '/' + dateObj.getDate() + '/' + (dateObj.getYear()+1900);
+
+function Prefs (keys) {
+
+    var runWhenReady = [];
+    var ready = false;
+
+    var prefObj = {
+
+        prefs : {},
+
+
+        ready (f) {
+            if (ready) {
+                console.log('Prefs.ready() run right away');
+                f()
+            }
+            else {
+                console.log('Prefs.ready - lets hold on a sec');
+                runWhenReady.push(f);
+            }
+        },
+
+        updatePrefs () {
+            var self = this;
+            chrome.storage.sync.get(keys, (r)=>{
+                console.log('updatePrefs got prefs!');
+                keys.forEach(
+                    (k)=>{self.prefs[k] = r[k]}
+                );
+                ready = true;
+                while (runWhenReady.length>0) {
+                    console.log('Running queued function: prefs are ready!');
+                    runWhenReady.pop()();
+                }
+                    
+                
+            });
+        },
+
+        get (k) {
+            return this.prefs[k]
+        },
+
+        set (k, v) {
+            var self = this;
+            if (keys.indexOf(k)==-1) {
+                throw Exception('Key %s not registered for prefs %s',k,keys);
+            }
+            var setDic = {};
+            setDic[k] = v;
+            self.prefs[k] = v;
+            console.log('Initially setting prefs %s: %s',k,self.prefs[k])
+            chrome.storage.sync.set(setDic,
+                                     ()=>{
+                                         console.log('Set %s in memory',k);
+                                     });
+        }
+
+        
+    };
+
+    prefObj.updatePrefs();
+    return prefObj;
 }
+
+function testPrefs () {
+    p = Prefs(['favoriteColor','favoriteFruit','favoriteDrink']);
+    
+    //p.set('favoriteColor','blue');
+    console.log('Get favorite color!');
+    //p.set('favoriteFruit','banana');
+    setTimeout( ()=>{
+        console.log('favorite fruit: %s',p.get('favoriteFruit'));
+        p.get('favoriteColor');
+        console.log('Got prefs: %s',JSON.stringify(p.prefs));
+    }, 500);
+    return p;
+}
+
+p = testPrefs();
