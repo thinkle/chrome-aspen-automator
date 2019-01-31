@@ -1835,8 +1835,8 @@ $(document).ready(function () {
     $('div:contains("Build view")').closest('table').addClass('buildView')
     $('div:contains("Family view")').closest('table').addClass('familyView')
     $('div:contains("Student view")').closest('table').addClass('studentView')
-
-
+    $('.whiteDownArrow').parent().addClass('downArrow');
+    // End CSS convenience methods
 
     prefs.ready(
         ()=>{
