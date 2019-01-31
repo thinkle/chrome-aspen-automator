@@ -5,11 +5,12 @@
     --gridshade: #e1f5fe;
     --gridunshade: #fffde7;
     --gridhighlight: #ff5165;
-    --top-color: #8e0016;
-    --dark-color: #c6093b;
+    --top: #8e0016;
+    --dark: #c6093b;
     --staff-color: #001190;
     --school-color: #8e0076;
     --lightlight: white;
+    --onlightlight: #444;
     --light: #929cff;
     --mid: #525cd2;
     --highlight: #ff5165;
@@ -30,14 +31,21 @@
     --gridshade: #ffffab;
     --gridunshade: white;
     --gridhighlight: #6ec6ff;
-    --top-color: #81d4fa;
-    --dark-color: #4ba3c7;
+    --top: white;
+    --on-top: black;
+    --dark: white; /* #4ba3c7; */
+    --on-dark: #4ba3c7;
     --staff-color: #001190;
     --school-color: #8e0076;
     --lightlight: white;
+    --on-lightlight : #444;
     --light: #b6ffff;
-    --mid: #2195f2;
+    --on-light: black;
+    /*--mid: #2195f2;*/
+    --mid: white;
+    --on-mid: #2195f2;
     --highlight: #6ec6ff;
+    --on-highlight: inherit;
     --button: #6ec6ff;
     --aabutton: #001070;
     --aabutton-fore: #dfdfdf;
@@ -144,12 +152,27 @@
 /*// Customizations... when our styles are turned on*/
 
 .aa-custom-style .navTabBackground {background-image:none;
+                                    color: var(--on-dark-text);
                                    } /* Get rid of stupid highlight */
+
+.aa-custom-style .navTabBackground a {
+    color: var(--on-mid);
+}
+
+.aa-custom-style .navTabBackgroundSelected {
+    border-bottom: 3px solid var(--on-mid);
+}
+
 
 
 .aa-custom-style .teacherClassesWidgetBanner {
     background-color: var(--lightlight);
+    color: var(--on-lightlight);
 }
+.aa-custom-style .teacherClassesWidgetBanner a {
+    color: var(--on-lightlight);
+}
+
 
 .aa-custom-style input[type="button"] {
     -webkit-appearance: none;
@@ -273,11 +296,25 @@
     background-color: var(--highlight)
 }
 
+/* Background colors - don't select A here or we mess things up */
+
 .aa-custom-style.bodyBackground { /* Background color */
-    background-color: var(--lightlight)
+    background-color: var(--lightlight);
+    color: var(--on-lightlight);
 }
+
+img.whiteDownArrow {
+    display: none;
+}
+
+.downArrow::after {
+    content : "▼";
+}
+
 .aa-custom-style .layoutHeader { /* Top */
-    background-color: var(--top-color);
+    /* We specifically DON'T want to select the anchor here */
+    background-color: var(--top);
+    color: var(--on-top);
 }
 
 .aa-custom-style .navTabDividerSolid {
@@ -359,6 +396,7 @@
 .comment
 {
     background-color: #ffffff;
+    color: black;
     font-family: var(--text-font);
 }
 
@@ -390,9 +428,10 @@
     color: var(--mid);
 }
 
-.aa-custom-style .c1Background
+.aa-custom-style .c1Background,.aa-custom-style .c1Background a
 {
     background-color: var(--mid);
+    color: var(--on-mid);
 }
 
 .aa-custom-style .c1Border
@@ -405,11 +444,12 @@
     color: var(--dark);
 }
 
-.aa-custom-style .c2Background
+.aa-custom-style .c2Background,.aa-custom-style .c2Background:hover,.aa-custom-style .c2Background a,.aa-custom-style .c2Background a:hover
 {
-    color: var(--dark);
     background-color: var(--mid);
+    color: var(--on-mid);
 }
+
 
 .aa-custom-style .c2Border
 {
@@ -423,17 +463,18 @@
 
 .aa-custom-style .c2Border-top
 {
-    border-top-color: var(--mid);
+    border-top: var(--mid);
 }
 
 .aa-custom-style .c3Color
 {
-    color: var(--dark-color);
+    color: var(--dark);
 }
 
-.aa-custom-style .c3Background
+.aa-custom-style .c3Background,.aa-custom-style .c3Background:hover
 {
     background-color: var(--light);
+    color: var(--on-light);
 }
 
 .aa-custom-style .c3Border
@@ -448,6 +489,7 @@
 .aa-custom-style .menuItemHighlight
 {
     background-color: var(--highlight);
+    color: var(--on-highlight);
 }
 /*.aa-custom-style .toolbarText:hover {
     color: white;
@@ -456,20 +498,22 @@
 .aa-custom-style .listCellLastSelectionHighlight
 {
     background-color: var(--highlight) !important;
+    color: var(--on-highlight);
     height: 20;
 }
 
-.aa-custom-style td.verticalTab {
+.aa-custom-style td.verticalTab,.aa-custom-style td.verticalTab a {
     border: none;
     background-color: var(--lightlight);
+    color: var(--on-lightlight);
 }
 
 .aa-custom-style .verticalTabShadowDown {
     border-bottom: none;
 }
-.aa-custom-style .verticalTabSelected {
+.aa-custom-style .verticalTabSelected,.aa-custom-style .verticalTabSelected a {
     background-color: var(--mid);
-    color: white;
+    color: var(--on-mid);
 }
 .aa-custom-style .verticalTabSelected * {
     color: white;
