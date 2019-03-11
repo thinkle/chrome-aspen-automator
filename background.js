@@ -188,8 +188,8 @@ chrome.runtime.onMessage.addListener(
 	  sendResponse(action);
 	  break;
       case 'log':
-	  console.log('Got log %s',request.arguments.length);
-	  request.arguments[0] = 'FRONTEND: '+request.arguments[0]+' (CONTEXT: '+request.context+')';
+	  //console.log('Got log %s',request.arguments.length);
+	  request.arguments[0] = 'FRONTEND LOG: '+request.arguments[0]+' (CONTEXT: '+request.context+')';
 	  console.log.apply(this,[request.arguments[0],request.arguments[1],request.arguments[2]]);
 	  //console.log.apply(this,request.arguments);
           break;
@@ -210,6 +210,17 @@ chrome.runtime.onMessage.addListener(
 	  val = doWait(request.waitlist);
 	  sendResponse(val);
 	  break;
+      case 'sleep':
+          if (!request.time) {request.time = 500} // default
+          console.log('Sleeping for %s',request.time);
+          setTimeout(
+              ()=>{
+                  console.log('Done sleeping!')
+                  sendResponse(true);
+              },
+              request.time
+          );
+          break;
       default:
 	  console.log('Fell thorugh with request mode %s',request.mode);
       }
