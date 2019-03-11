@@ -1,19 +1,28 @@
 console.log('Loading delayedDoer');
 function doAction (action, completionChecker, nextAction) {
+    var firstWait = true;
     try {
 	console.log('Run action: %s',action);
+        log('Delayed Doer do action ',action)
 	action()
     }
     catch (err) {
 	console.log('trouble calling %s',action);
 	console.log('err=%s',err)
+        log('Delayed Doer ERROR on action %s',action)
     }
     function checkForCompletion () {
 	if (completionChecker()) {
-	    if (nextAction) {nextAction()}
+	    if (nextAction) {
+                log('Delayed Doer: nextAction! (done with %s)',action);
+                nextAction()}
 	}
 	else {
-	    console.log('waiting...');
+            if (firstWait) {
+                log('Delayed Doer: waiting... (action %s)',action);
+	        console.log('waiting... (action %s)',action);
+                firstWait = false;
+            }
 	    setTimeout(checkForCompletion,100);
 	}
     }
