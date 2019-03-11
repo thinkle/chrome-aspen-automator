@@ -5,7 +5,7 @@ var DELAY = 5000;
 
 gft = {} // globals for testing -- bad :) - just shove stuff in here to see it easily in the console
 var mid_increment = 1 // For keeping track of new class/id names we append
-var prefs = Prefs(['customStyle']);
+var prefs = Prefs(['customStyle','GCID']);
 
 // Convenience functions...
 
@@ -152,7 +152,12 @@ function setTable (data) {
 	log('cat',cat,':',data[cat])
 	actions.push(getValueSetter(cat,data[cat]));
     }
-    actions.push(DelayedAction(doSave,function () {return true}));
+    //actions.push(DelayedAction(doSave,function () {return true}));
+    // Note: not sure when we changed this but we MAY want to move to
+    // the backend-sleep process elsewhere since sleeping after hitting
+    // save is likely to fail if the page reloads before the timer goes
+    // off...
+    actions.push(DelayedTimerAction(doSave,200));
     loopThroughActions(actions);
 }
 
@@ -231,6 +236,24 @@ function testTableSet () {
     $('#saveButton').click()
 }
 
+// ****************************************
+// JQuery Methods for grabbing data from X2
+// ****************************************
+
+function getLastBreadcrumb () {
+    var crumbs = $('#breadcrumbsContainer .breadcrumbs a')
+    var lastCrumb = crumbs[crumbs.length-1]
+    return {
+        text:lastCrumb.innerHTML,
+        href:$(lastCrumb).attr('href')
+    }
+}
+
+function getCurrentGradebookClass () {
+    // Get the current from Breadcrumbs
+    return getLastBreadcrumb().text
+}
+
 function getAssignmentsFromGradebook () {
     topLevelTable = $('#gradeInputTable');
     // The X2 "table" consists of 4 tables...
@@ -283,6 +306,7 @@ function getAssignmentsFromGradebook () {
     return rows
 }
 
+// Object for handing tabular data from X2
 function TableObject (data) {
     var obj = {
 	colHeaders : [],
@@ -450,6 +474,8 @@ function TableObject (data) {
     return obj
 }
 
+
+// Test code
 function printAssignments () {
     printArray(getAssignmentsFromGradebook())
 }
@@ -514,7 +540,7 @@ function commentAction (comment) {
     return o;
 }
 
-
+// Convenience method for entering text and making X2 see it...
 function writeText (t) {
     $('body')[0].dispatchEvent(new MouseEvent("click"));
     $('body')[0].innerHTML = t;
@@ -539,6 +565,21 @@ function addAssignmentsFromAssignmentsTab (assignmentsData, after) {
 	    'action':{'name':'createAssignment',
 		      'assignment':assignment}
 	})
+        // We need the backend to wait a tick for the save to complete. We can't
+        // use Delayed Timer's on the front-end side since there's no telling
+        // when/how the page reloads and how that messes with what we're expecting.
+        // It may be a better approach long term would be to actually use a fancier
+        // waiter that checks for an empty form before starting the next "tick" but
+        // we'll wait on that for now -- this timer improves things dramatically
+        // so far.
+        chrome.runtime.sendMessage({
+            mode:'register',
+            'url':firstOne ? 'addRecord.do' : 'assignmentDetail.do',
+            action:{
+                name:'backendSleep',
+                time:500,
+            }
+        });
 	firstOne = false;
     }
     if (after) {
@@ -572,14 +613,27 @@ function fillOutReportingStandard (std) {
 function getFillOutAssignmentActions (data) {
     actionList = []
     //actionList.push(DelayedTimerAction(function () {clickOptionsAction('Add')},500));
+
     for (var label in data) {
 	if (data[label]) {
 	    actionList.push(getValueSetter(label,data[label]))
 	}
     }
+    // actionList.push(
+    //     DelayedAction(()=>{console.log('Meaningless extra action as a test!')},
+    //                   200)
+    // );
     actionList.push(
-	DelayedTimerAction(doSaveAndNew,500)
+        // no delay here -- we added a delay on the back-end when
+        // we built the set of requests via multi-add :)
+        DelayedAction(doSaveAndNew) 
     );
+    //actionList.push(
+    //DelayedAction(()=>{console.log('Meaningless extra action as a test!')},
+    //200)
+    //);    
+       
+        
     return actionList
 }
 
@@ -681,8 +735,10 @@ function testMessaging () {
     // for (var a of actions ) {registerAnAction(a)}
 }
 
+//////////////////////////////////////////////////////////////////
 /* Our own user interface which gets added to X2 URLs as follows...
 */
+//////////////////////////////////////////////////////////////////
 function UserInterface () {
 
     var self = {}
@@ -885,16 +941,13 @@ function UserInterface () {
 
         // Google Classroom Assignment Import
         [/assignmentList.do/,function () {
-            console.log('Setup classroom button');
             addToOptionBar(
                 Button('Import Google Classroom Assignments', ()=>{
-                    var gcp = GoogleClassroomPicker( // GLOBAL FOR DEBUGGING
+                    var gcp = GoogleClassroomPicker( 
                         'Import Google Classroom Assignments',
                         (assignments)=>{
                             console.log('GOT ASSIGNMENTS!');
-                            assgns = assignments
-                            console.log('in global: assgns');
-                            console.log(assgns);
+                            var assgns = assignments
                             assignments.forEach((a)=>{
                                 a.Category = 'WH';
                                 a['GB column name'] = a.aspenShort;
@@ -1417,7 +1470,7 @@ function UserInterface () {
         var $popup = makePopup();
         var dh = csvDataHandler(
             assignmentFields,
-            'CSV',
+            'Import',
             importAssignmentsFromCsvCallback
         );
 	$popup.buttonbar.append(dh.$buttonArea);
@@ -1443,20 +1496,37 @@ function UserInterface () {
 
 
     function GoogleClassroomPicker (header, cb, params) {
+        var GCIDs = prefs.get('GCID');
+        if (!GCIDs) {
+            GCIDs = {}
+        }
+        else {
+            console.log('Beginning with GCIDs from memory!');
+            console.log(GCIDs);
+        }
         var _lastClass = ''
         if (!params) {params = {getGrades : false}}
         var obj = {
             popup : $popup,
-
+            courseViaPref : false,
             getSelectedClass : function () {
+                if (obj.courseViaPref) {
+                    return obj.courseViaPref;
+                }
                 var checkedBoxes = $('input[name="aa-google-course"]:checked');
                 if (checkedBoxes[0]) {
                     _lastClass = obj.loadedClasses[checkedBoxes[0].value]
-                    return _lastClass
+                }
+                if (_lastClass) {
+                    GCIDs[getCurrentGradebookClass()] = _lastClass;
+                    console.log('Updated GCID=>',JSON.stringify(GCIDs));
+                    console.log('Save associaton: %s=>%s',getCurrentGradebookClass(),_lastClass);
+                    prefs.set('GCID',GCIDs);
                 }
                 else {
-                    return _lastClass
+                    console.log('weird - nothing selected???');
                 }
+                return _lastClass
             },
             getSelectedAssignments : function () {
                 return $('input[name="aa-google-assignment"]:checked').map(function () {return obj.loadedAssignments[this.value]}).get()
@@ -1477,6 +1547,8 @@ function UserInterface () {
         $popup.body.append($waiting);
         
         fetchClasses()
+        gft.gcp = obj;
+
         return obj
 
 
@@ -1517,13 +1589,17 @@ function UserInterface () {
                      id : course.id
                  }},
                 function (assignmentData) {
-                    assignmentD = assignmentData
-                    console.log('Storing asignment data in assignmentD global for inspection....');
+                    console.log('listGradedAssignments CALLBACK');
+                    gft.assignmentD = assignmentData // for testing
                     $popup.body.empty();
                     obj.loadedAssignments = {}
                     assignmentData.forEach((cw)=>obj.loadedAssignments[cw.id]=cw);
                     $popup.body.append(AssignmentPicker(assignmentData));
-                    $actionButton.remove();
+                    if ($actionButton) {
+                        // If there was an existing button, get rid of it...
+                        $actionButton.remove();
+                    }
+                    console.log('Add Select button');
                     $actionButton = Button('Select',()=>{
                         if (params.getGrades) {
                             fetchGrades();
@@ -1539,20 +1615,29 @@ function UserInterface () {
         }
 
         function fetchClasses () {
-            chrome.runtime.sendMessage(
-                {mode:'classroom',
-                 method:'listCourses',
-                },
-                function handleResponse (data) {
-                    var $coursePicker = CoursePicker(data);
-                    $waiting.remove();
-                    $popup.body.append($coursePicker);
-                    obj.loadedClasses = {};
-                    data.courses.forEach((c)=>obj.loadedClasses[c.id]=c);
-                    $actionButton = Button('Load Assignments',fetchAssignments)
-                    $popup.buttonbar.append($actionButton);
-                }
-            );
+            var currentClass = getCurrentGradebookClass();
+            var courseObj = GCIDs[currentClass]
+            if (courseObj) {
+                console.log('Using saved course association: %s=>%s',currentClass,courseObj);
+                obj.courseViaPref = courseObj;
+                fetchAssignments();
+            }
+            else {
+                chrome.runtime.sendMessage(
+                    {mode:'classroom',
+                     method:'listCourses',
+                    },
+                    function handleResponse (data) {
+                        var $coursePicker = CoursePicker(data);
+                        $waiting.remove();
+                        $popup.body.append($coursePicker);
+                        obj.loadedClasses = {};
+                        data.courses.forEach((c)=>obj.loadedClasses[c.id]=c);
+                        $actionButton = Button('Load Assignments',fetchAssignments)
+                        $popup.buttonbar.append($actionButton);
+                    }
+                );
+            }
         }
 
         function CoursePicker (data) {
@@ -1562,7 +1647,7 @@ function UserInterface () {
             $picker.append($courseList);
             data.courses.forEach(
                 (c)=>{
-                    $courseList.append($(`<li><input name="aa-google-course" type="checkbox" class="aa-course-picker" value="${c.id}"> <b><a href="${c.alternateLink}" target="_BLANK">${c.name}</a></b></li>`));
+                    $courseList.append($(`<li><input name="aa-google-course" type="radio" class="aa-course-picker" value="${c.id}"> <b><a href="${c.alternateLink}" target="_BLANK">${c.name}</a></b></li>`));
                 });
             return $picker;
         }
@@ -1642,7 +1727,7 @@ function Poller (ui) {
 	case "createAssignment":
 	    log('Got action: createAssignment %s',JSON.stringify(action));
 	    var actions = getFillOutAssignmentActions(action.assignment);
-	    var finishIt = function () {
+	    var finishIt = function ()   {
 		log('Sending complete signal %s',action);
 		chrome.runtime.sendMessage({'mode':'complete',
 					    'url':document.URL,
@@ -1782,11 +1867,26 @@ function Poller (ui) {
 	    self.complete(action) // Finally, let us complete
 	    break;
 
+        case "backendSleep":
+            console.log('Got request to make backend sleep: let\'s do that now...');
+            chrome.runtime.sendMessage(
+                {
+                    mode:sleep,
+                    time:action.time
+                },
+                (r)=>{
+                    console.log('Backend done sleeping...');
+                    self.complete(action); // let us complete!
+                }
+            )
+            break;
+
 
 	default:
 	    log('No handler for action: %s',action.name);
 	    log('Complete action: %s',JSON.stringify(action));
 	} // end switch
+
     }
 
     self.complete = function (action) {
@@ -1975,10 +2075,22 @@ function Prefs (keys) {
 
         updatePrefs () {
             var self = this;
+            console.log('Fire off updatePrefs...');
             chrome.storage.sync.get(keys, (r)=>{
-                console.log('updatePrefs got prefs!');
+                console.log('updatePrefs got prefs! %s',r);
                 keys.forEach(
-                    (k)=>{self.prefs[k] = r[k]}
+                    (k)=>{
+                        console.log('Got pref: %s',k);
+                        try { 
+                            self.prefs[k] = JSON.parse(r[k]);
+                            console.log('Parsed %s => %s',r[k],self.prefs[k]);
+                        }
+                        catch (err) {
+                            console.log('Error parsing pref key: %s, value: %s',k,r[k]);
+                            console.log('Use raw value');
+                            self.prefs[k] = r[k];
+                        }
+                    }
                 );
                 ready = true;
                 while (runWhenReady.length>0) {
@@ -1988,24 +2100,25 @@ function Prefs (keys) {
                     
                 
             });
+            console.log('waiting for prefs...');
         },
 
         get (k) {
-            return this.prefs[k]
+                return this.prefs[k]
         },
 
         set (k, v) {
             var self = this;
             if (keys.indexOf(k)==-1) {
-                throw Exception('Key %s not registered for prefs %s',k,keys);
+                throw ['Key %s not registered for prefs %s',k,keys];
             }
             var setDic = {};
-            setDic[k] = v;
+            setDic[k] = JSON.stringify(v);
             self.prefs[k] = v;
             console.log('Initially setting prefs %s: %s',k,self.prefs[k])
             chrome.storage.sync.set(setDic,
                                      ()=>{
-                                         console.log('Set %s in memory',k);
+                                         console.log('Set %s in memory => %s',k,setDic[k]);
                                      });
         }
 
@@ -2017,8 +2130,7 @@ function Prefs (keys) {
 }
 
 function testPrefs () {
-    p = Prefs(['favoriteColor','favoriteFruit','favoriteDrink']);
-    
+    p = Prefs(['favoriteColor','favoriteFruit','favoriteDrink','GCIDs']);
     //p.set('favoriteColor','blue');
     console.log('Get favorite color!');
     //p.set('favoriteFruit','banana');
