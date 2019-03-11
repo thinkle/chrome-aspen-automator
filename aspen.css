@@ -35,8 +35,13 @@
     --on-top: black;
     --dark: white; /* #4ba3c7; */
     --on-dark: #4ba3c7;
-    --staff-color: #001190;
-    --school-color: #8e0076;
+    /*--staff-color: #001190;*/
+    --staff-color: white;
+    --staff-underline: 1px solid #001190;
+    /*--on-staff: white;*/
+    --on-staff: #001190;
+    --school-color: white;
+    --on-school:  #8e0076;
     --lightlight: white;
     --on-lightlight : #444;
     --light: #b6ffff;
@@ -67,7 +72,9 @@
     color: var(--aabutton-fore);
     font-size: 10pt;
     padding: 2px 7px 2px 7px;
+    height: 23px;
     display: inline-block;
+    vertical-align: middle;
     margin: 2px;
     font-family: var(--aa-font);
 }
@@ -293,7 +300,8 @@
     font-weight: bold;
 }
 .aa-custom-style .button:hover {
-    background-color: var(--highlight)
+    background-color: var(--highlight) !important;
+    color: var(--on-highlight) !important;
 }
 
 /* Background colors - don't select A here or we mess things up */
@@ -307,9 +315,33 @@ img.whiteDownArrow {
     display: none;
 }
 
-.downArrow::after {
-    content : "▼";
+.downArrow {
+    position: relative;
+    padding-right: 17px !important;
 }
+
+.downArrow.c2Background {
+    /*margin-right: -15px;*/
+}
+
+img[src="images/spacer.gif"] {
+    display: none;
+}
+
+.toolbarItem {
+    padding-top: 2px !important; /* was 20px */
+    padding-bottom: 5px !important;  /* was 20px */
+}
+/* Meh -- the arrow looks dumpy anyway */
+/* .downArrow.c2Background::after { */
+/*     content : "▼"; */
+/*     position: absolute; */
+/*     width: 0px; */
+/*     right: 3px; */
+/*     /\*position: absolute; */
+/*     right: 2px; */
+/*     top: 2px;*\/ */
+/* } */
 
 .aa-custom-style .layoutHeader { /* Top */
     /* We specifically DON'T want to select the anchor here */
@@ -446,8 +478,8 @@ img.whiteDownArrow {
 
 .aa-custom-style .c2Background,.aa-custom-style .c2Background:hover,.aa-custom-style .c2Background a,.aa-custom-style .c2Background a:hover
 {
-    background-color: var(--mid);
-    color: var(--on-mid);
+    background-color: var(--mid) !important;
+    color: var(--on-mid) !important;
 }
 
 
@@ -573,15 +605,33 @@ img.whiteDownArrow {
     border: none;
 }
 
-.aa-custom-style .districtView {
-    background-color: #1f1f1f;
+.aa-custom-style .districtView,.aa-custom-style .districtView a {
+    background-color: var(--top);
+    color: --var(on-top);
 }
-.aa-custom-style .schoolView {
+.aa-custom-style .schoolView,.aa-custom-style .schoolView a {
     background-color: var(--school-color);
+    color: var(--on-school);
+}
+
+.aa-custom-style .staffView,.aa-custom-style .staffView a {
+    background-color: var(--staff-color);
+    color: var(--on-staff);    
 }
 
 .aa-custom-style .staffView {
-    background-color: var(--staff-color);
+    border-bottom: var(--staff-underline);
+}
+
+.aa-custom-style .lightTitle,.aa-custom-style .toolbarText,.aa-custom-style .toolBarItem {
+    color: var(--on-top);
+}
+
+.aa-custom-style .staffView .lightTitle, .aa-custom-style .staffView .toolbarText,.aa-custom-style .staffView .toolBarItem {
+    color: var(--on-staff);
+}
+.aa-custom-style .schoolView .lightTitle, .aa-custom-style .schoolView .toolbarText,.aa-custom-style .schoolView .toolBarItem {
+    color: var(--on-school);
 }
 
 
