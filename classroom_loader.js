@@ -9,25 +9,17 @@
 
 var data = ''
 
-// Let's add a way to load a spreadsheet!
-function loadGoogleSheetBackasswards (url,callback,ecallback) {
-    return grabData(
-        {spreadsheeturl:url},
-        callback);
-}
 
 function loadGoogleSheet (url, callback, ecallback) {
     url = url.replace(/edit#/,"export?format=csv&")
-    console.log('URL: %s',url);
+    //console.log('URL: %s',url);
     var request = new XMLHttpRequest();
     request.open('GET',url,true);
     request.onreadystatechange = function () {
-        console.log('Got data : %s',request.responseText);
+        //console.log('Got data : %s',request.responseText);
         try {
             rawCsv = request.responseText;
-            //csvdata = Papa.parse(request.responseText) // global for debugs :)
             if (callback) {
-                //callback(csvdata);
                 callback(rawCsv); // just give them the data :) - we'll parse browser-side...
             }
         }
@@ -38,7 +30,6 @@ function loadGoogleSheet (url, callback, ecallback) {
         }
     }
     request.send();
-    console.log('sent csv request');
 }
 
 
@@ -269,7 +260,7 @@ chrome.runtime.onMessage.addListener(
                 });
             }
             console.log('listener returning true to indicate async');
-            // https://stackoverflow.com/questions/20077487/chrome-extension-message-passing-response-not-sent/20077854#20077854            
+            // https://stackoverflow.com/questions/20077487/chrome-extension-message-passing-response-not-sent/20077854#20077854
             return true; // async! -- all of these methods are async
         }
     }); // end listener
