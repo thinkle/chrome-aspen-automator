@@ -5,7 +5,7 @@ var DELAY = 5000;
 
 gft = {} // globals for testing -- bad :) - just shove stuff in here to see it easily in the console
 var mid_increment = 1 // For keeping track of new class/id names we append
-var prefs = Prefs(['customStyle','GCID']);
+var prefs = Prefs(['customStyle','GCID','DefaultTerm','DefaultScale','DefaultCategory','ZeroAsM']);
 
 // Convenience functions...
 
@@ -751,8 +751,11 @@ function UserInterface () {
 	    showBrand = Button('Aspen Automator', function () {
 		myBrand = $(`<div>
              <h2>Aspen Automator</h2>
-             <p>Your Aspen Experience is enhanced by Aspen Automator.</p>
+             <p>Your Aspen Experience is enhanced by 
+             <a href="http://tomhinkle.net/#/proj/aspen-automator">Aspen Automator</a>.</p>
              <p>The <button class="aa-button">Buttons</button> that look like this come from this add-on.</p>
+<p>If you want to use the Google Classroom import features, you will have to authorize my google apps script app to access your classroom data.</p>
+<a href="https://script.google.com/macros/s/AKfycbw2NEUVEicCMjD0stwgUz5MwLCa_IeP2qIuxB8_qfxZiRqgYjo/exec?authorize=true">Click Here to Authorize Google Apps Connection</a>
              <p>This plugin allows importing CSVs into gradebooks and other long-term wish-list items of mine.</p>
              <p>It relies on automating the Aspen UI, so it will break when they update and YMMV.</p></div>
              `)
@@ -946,18 +949,19 @@ function UserInterface () {
                     var gcp = GoogleClassroomPicker( 
                         'Import Google Classroom Assignments',
                         (assignments)=>{
-                            console.log('GOT ASSIGNMENTS!');
-                            var assgns = assignments
+                            console.log('GOT ASSIGNMENTS YEAH!');
+                            //var assgns = assignments // why was this line here???
+                            console.log('We have %s to work with',assignments.length);
                             assignments.forEach((a)=>{
-                                a.Category = 'WH';
+                                a.Category = prefs.get('DefaultCategory','WH');  // 'WH';
                                 a['GB column name'] = a.aspenShort;
                                 a['Assignment name'] = a.aspenLong;
                                 a['Date assigned'] = dateToAspenDate(new Date(a.creationTime));
                                 a['Date due'] = a.dueDate.month+'/'+a.dueDate.day+'/'+a.dueDate.year;
                                 a['Total points'] = a.maxPoints;
                                 a['Extra credit points'] = 0;
-                                a['Grade Scale'] = 'Current High School Grade Scale';
-                                a['Grade Term'] = 'S2';
+                                a['Grade Scale'] = prefs.get('DefaultScale','Current High School Grade Scale');
+                                a['Grade Term'] = prefs.get('DefaultTerm','S1'); // 'S2';
                             });
                             console.log('Now let\'s import them!')
                             addAssignmentsFromAssignmentsTab(assignments);
@@ -1011,6 +1015,7 @@ function UserInterface () {
                     gcp = GoogleClassroomPicker(
                         'Import Google Classroom Grades',
                         (assignments)=>{
+                            //console.log('Picker got assignments: %s',JSON.stringify(assignments));
 
                             function getName (name) {
                                 if (mytable.colHeaders.indexOf(name)>-1) {
@@ -1035,12 +1040,21 @@ function UserInterface () {
                             }
 
                             // Now let's do the actual import....
-                            mytable = TableObject(getAssignmentsFromGradebook()); // global
+                            var mytable = TableObject(getAssignmentsFromGradebook()); // global
+                            var convertZeros = prefs.get('ZeroAsM',true);
+                            function getGrade (g) {
+                                if (convertZeros && g=='0' || g==0) {
+                                    return 'M'
+                                }
+                                else {
+                                    return g
+                                }
+                            }
                             var actions = assignments.map(
                                 (a)=>mytable.setCellDelayed(
                                     getName(a.name), // row
                                     getAssignment(a.encId),//column
-                                    a.grade// val
+                                    getGrade(a.grade)// val
                                     //comment - no need
                                 )
                             );
@@ -1555,6 +1569,10 @@ function UserInterface () {
         function fetchGrades () {
             var course = obj.getSelectedClass();
             var assignments = obj.getSelectedAssignments();
+            //console.log('fetchGrades: assignments=>%s',JSON.stringify(assignments))
+            if (!assignments||assignments.length==0) {
+                console.log('Weird -- no assignments');
+            }
             $popup.body.empty();
             $popup.body.append(`<div><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div>`);
             chrome.runtime.sendMessage(
@@ -1573,6 +1591,52 @@ function UserInterface () {
                 }
             );
         }
+
+
+        function BoolPrefSetter (label, pref, defaultVal) {
+            mid_increment += 1;
+            var $span = $('<div></div>');
+            var $input = $(`<input input="aa-input-${mid_increment}" type="checkbox" checked="${prefs.get(pref,defaultVal)}">`);
+            var $label = $(`<label for="aa-input-${mid_increment}">${label}:</label> `);
+            $span.append($label)
+            $span.append($input);
+
+            $input.change(
+                function () {
+                    console.log('Update pref %s',pref,this.checked);
+                    prefs.set(pref,this.checked);
+                });
+            
+            return $span;
+        }
+
+        function TextPrefSetter (label, pref, defaultVal) {
+            mid_increment += 1;
+            var $span = $(`<div></div>`);
+            var $input = $(`<input id="aa-input-${mid_increment}" type="text" value="${prefs.get(pref,defaultVal)}">`);
+            var $label = $(`<label for="aa-input-${mid_increment}">${label}: </label> `);
+            $span.append($label);
+            $span.append($input);
+
+            $input.change(
+                function () {
+                    console.log('Update pref %s',pref,this.value);
+                    prefs.set(pref,this.value);
+                }
+            );
+
+            return $span;
+        }
+
+        function DefaultValueSetter () {
+            var $div = $('<div>');
+            $div.append(TextPrefSetter('Category','DefaultCategory','WH'));
+            $div.append(TextPrefSetter('Grade Term','DefaultTerm','S1'));
+            $div.append(TextPrefSetter('Grade Scale','DefaultScale','Current High School Grading Scale'));
+            $div.append(BoolPrefSetter('Convert Zeros','ZeroAsM',true));
+            return $div;
+        }
+
 
         function fetchAssignments () {
             var course = obj.getSelectedClass()
@@ -1595,6 +1659,7 @@ function UserInterface () {
                     obj.loadedAssignments = {}
                     assignmentData.forEach((cw)=>obj.loadedAssignments[cw.id]=cw);
                     $popup.body.append(AssignmentPicker(assignmentData));
+                    $popup.body.append(DefaultValueSetter())
                     if ($actionButton) {
                         // If there was an existing button, get rid of it...
                         $actionButton.remove();
@@ -1612,6 +1677,7 @@ function UserInterface () {
                     $popup.buttonbar.append($actionButton);
                 }
             );
+            
         }
 
         function fetchClasses () {
@@ -1903,7 +1969,9 @@ function Poller (ui) {
 	    {'mode':'get',
 	     'url':document.URL},
 	    function (action) {
-		console.log('Polling got %s',action);
+                if (action) {
+		    console.log('Polling got %s',action);
+                }
 		if (action==BUSY) {
 		    console.log('Already busy completing a task.');
 		}
@@ -2103,8 +2171,12 @@ function Prefs (keys) {
             console.log('waiting for prefs...');
         },
 
-        get (k) {
-                return this.prefs[k]
+        get (k, defaultVal) {
+            if (this.prefs[k]===undefined) {
+                this.set(k,defaultVal);
+                return defaultVal;
+            }
+            return this.prefs[k]
         },
 
         set (k, v) {
