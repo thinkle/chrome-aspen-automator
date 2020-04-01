@@ -51,10 +51,22 @@ function ActionTracker  () {
 	    if (url.indexOf(pattern) > -1) {
 		return url_matchers[pattern]
 	    }
+            if (url.indexOf(encodeURI(pattern)) > -1) {
+                return url_matchers[pattern]
+            }
 	}
     }
 
     var self = {
+        __data : function () {
+            return data;
+        },
+
+        __url_matchers : function () {
+            return url_matchers;
+        },
+        
+        
 	getAction : function (context, url) {
 	    if (!context) {
 		context = url_matchers[url]
@@ -92,6 +104,9 @@ function ActionTracker  () {
 		actionList = data[context] 
 	    }
 	    actionList.queued.push(action)
+            action.__meta = {
+                context, url
+            }
 	    return actionList.queued.length
 	}, // end queueAction
 
@@ -99,7 +114,9 @@ function ActionTracker  () {
 	    var a = self.getAction(context,url)
 	    if (a) {
 		if (a.inprogress.length > 0) {
-		    return BUSY
+                    console.log('BCK: Busy with ',a.inprogress);
+		    return {type:BUSY,
+                            inprogress:a.inprogress}
 		}
 		if (a.queued.length > 0) {
 		    var next = a.queued.shift()
@@ -111,18 +128,28 @@ function ActionTracker  () {
 
 	skipAction : function (context, url) {
 	    var action = self.getAction(context,url);
+            if (!action) {
+                console.log('BCK: resetAction called but we have no action for ',context,url);
+                return
+            }
+            console.log('BCK: Eliminating in-progress queue of...',action.inprogress);
 	    action.inprogress = [] // set to nothing...
 	},
 
 	resetAction : function (context, url) {
 	    var action = self.getAction(context,url);
+            if (!action) {
+                console.log('BCK: resetAction called but we have no action for ',context,url);
+                return
+            }
             if (action.inprogress) {
+                console.log('BCK: resetAction called, re-queuing ',action.inprogress);
 	        var newqueue = action.inprogress.concat(action.queue)
 	        action.inprogress = [];
 	        action.queue = newqueue;
             }
             else {
-                console.log('resetAction called, but we have nothing in progress.');
+                console.log('BCK: resetAction called, but we have nothing in progress.');
             }
 	},
 
@@ -139,7 +166,7 @@ function ActionTracker  () {
 	completeAction : function (action, context, url) {
 	    var a = self.getAction(context,url)
 	    if (!a) {
-		console.log('Oops: %s, %s, %s',JSON.stringify(action),context,url)
+		console.log('BCK: Oops: %s, %s, %s',JSON.stringify(action),context,url)
 		throw "Completing action that doesn't exist"}
 	    var i = a.inprogress.indexOf(action)
 	    a.inprogress.splice(i,1); // remove item
@@ -150,7 +177,9 @@ function ActionTracker  () {
     return self
 }
 
+chatty = false;
 actions = ActionTracker()
+
 
 
 function doWait (contexts) {
@@ -173,7 +202,7 @@ chrome.runtime.onMessage.addListener(
       //            "from the extension");
       switch (request.mode) {
       case 'register':
-	  console.log('register action %s',JSON.stringify(request));
+	  console.log('BCK: register action %s',JSON.stringify(request));
 	  sendResponse(
 	      actions.queueAction(
 		  request.action,
@@ -184,11 +213,14 @@ chrome.runtime.onMessage.addListener(
 	  break;
       case 'get':
 	  var action = actions.startAction(request.context,request.url);
-	  if (action) {console.log('Got action %s',JSON.stringify(action));}
+	  if (action) {console.log('BCK: Got action %s',JSON.stringify(action));}
+          if (chatty) {
+              console.log('BCK: Got request: ',request);
+          }
 	  sendResponse(action);
 	  break;
       case 'log':
-	  //console.log('Got log %s',request.arguments.length);
+	  //console.log('BCK: Got log %s',request.arguments.length);
 	  request.arguments[0] = 'FRONTEND LOG: '+request.arguments[0]+' (CONTEXT: '+request.context+')';
 	  console.log.apply(this,[request.arguments[0],request.arguments[1],request.arguments[2]]);
 	  //console.log.apply(this,request.arguments);
@@ -201,7 +233,7 @@ chrome.runtime.onMessage.addListener(
 	  // skip the current action for this URL
 	  break;
       case 'complete':
-	  console.log('Complete action %s %s %s',JSON.stringify(request.action), request.context, request.url);
+	  console.log('BCK: Complete action %s %s %s',JSON.stringify(request.action), request.context, request.url);
 	  actions.completeAction(
 	      request.action,request.context,request.url
 	  );
@@ -212,17 +244,31 @@ chrome.runtime.onMessage.addListener(
 	  break;
       case 'sleep':
           if (!request.time) {request.time = 500} // default
-          console.log('Sleeping for %s',request.time);
+          console.log('BCK: Backend Sleeping for %s...',request.time);
           setTimeout(
               ()=>{
-                  console.log('Done sleeping!')
+                  // let's complete ourselves in case the front-end is wonky...
+                  console.log('BCK: Done sleeping -- Completing sleep action... ',
+                      request.originalAction,request.originalAction.__meta.context,request.originalAction.__meta.url
+                             );
+                  actions.completeAction(
+                      request.originalAction,request.originalAction.__meta.context,request.originalAction.__meta.url
+                  );
+                  console.log('BCK: Done sleeping -- send response!')
                   sendResponse(true);
               },
               request.time
           );
           break;
       default:
-	  console.log('Fell thorugh with request mode %s',request.mode);
+	  console.log('BCK: Fell thorugh with request mode %s',request.mode);
       }
   }
 ); // end listener
+console.log('****************************************************');
+console.log('****** WELCOME TO ASPEN AUTOMATOR DEBUGGING ********')
+console.log('****** Want to debug? Look at actions       ********');
+console.log('****** set chatty => true to log every      ********');
+console.log('****** polling request from the front-end   ********');
+console.log('****************************************************')
+
