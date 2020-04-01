@@ -6,12 +6,16 @@
 // -- see link below...
 //
 // https://script.google.com/a/innovationcharter.org/macros/s/AKfycbzAFwr4tyBgH-IAJDaq09HlEqlcrSqLQ8OLZIYnQIKy/dev
+// https://script.google.com/a/innovationcharter.org/macros/s/AKfycbz3WdooIEo89mThozFj6X4KNNVr02vTwt4_La9a8p_FkXtrKMaV/exec
+// https://script.google.com/a/innovationcharter.org/d/1x2Hb0lsYvX3VbEIIlcVoi-psZAVkJaAPYc7tLiHqoKfa73f49vZoltNQ/edit?usp=drive_web
+// Latest Shim:
+// https://script.google.com/a/innovationcharter.org/macros/s/AKfycbxArZX9csBS-i48BdJmVcCY0MejJkd2fatw78Sw/exec
 
 var data = ''
 
 
 function loadGoogleSheet (url, callback, ecallback) {
-    url = url.replace(/edit#/,"export?format=csv&")
+    url = url.replace(/edit.*#/,"export?format=csv&")
     //console.log('URL: %s',url);
     var request = new XMLHttpRequest();
     request.open('GET',url,true);
@@ -43,7 +47,9 @@ function grabData (params, callback) {
         str += key + "=" + encodeURIComponent(params[key]);
     }
     xhr = new XMLHttpRequest();
-    var url = 'https://script.google.com/a/innovationcharter.org/macros/s/AKfycbzAFwr4tyBgH-IAJDaq09HlEqlcrSqLQ8OLZIYnQIKy/dev?'+str
+    //var url = 'https://script.google.com/a/innovationcharter.org/macros/s/AKfycbzAFwr4tyBgH-IAJDaq09HlEqlcrSqLQ8OLZIYnQIKy/dev?'+str
+    // WARNING: This URL is also specified in aspen.js as a user visible link to authorize
+    var url = 'https://script.google.com/macros/s/AKfycbw2NEUVEicCMjD0stwgUz5MwLCa_IeP2qIuxB8_qfxZiRqgYjo/exec?' + str;
     console.log('URL: %s',url);
     xhr.open('GET',url,true)
     xhr.onreadystatechange = function () {
