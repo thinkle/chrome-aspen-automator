@@ -1,9 +1,11 @@
+// NOTE: we also import globals.js and delayedDoer.js
+
 // Delay we add when needed for X2 to do its thing (in milliseconds)
 var DELAY = 5000;
 
 // Variables and such...
 
-gft = {} // globals for testing -- bad :) - just shove stuff in here to see it easily in the console
+var gft = {} // globals for testing -- bad :) - just shove stuff in here to see it easily in the console
 var mid_increment = 1 // For keeping track of new class/id names we append
 var prefs = Prefs(['customStyle','GCID','DefaultTerm','DefaultScale','DefaultCategory','ZeroAsM']);
 
@@ -63,14 +65,14 @@ function setValue (lab, val) {
 
 function getValueSetter (lab,val,n) {
     if (!n) {n=0}
-    $label = $($('span:contains("'+lab+'")')[n]);
-    $labelParent = $($label.parent('td'))
-    $nextCell = $($labelParent.siblings('td.detailValue')[0]);
+    var $label = $($('span:contains("'+lab+'")')[n]);
+    var $labelParent = $($label.parent('td'))
+    var $nextCell = $($labelParent.siblings('td.detailValue')[0]);
     var doExtraCheck, origVals, timer, totalTimer
     var valueWidgets = $nextCell.find('input')
     var w = valueWidgets[0]
     gft[lab] = valueWidgets
-    waitTime = 500;
+    var waitTime = 500;
     return DelayedAction(
 	function () {
 	    log('Setting widget %s to %s (%s)',w,val,lab);
@@ -102,7 +104,7 @@ function getValueSetter (lab,val,n) {
 	function () { // completion checker :)
 	    if (timer) {
 		// if we're using a timer...
-		elapsed = new Date().getTime() - timer
+		var elapsed = new Date().getTime() - timer
 		if (elapsed > waitTime) {
 		    log('After I waited %s, moving on',waitTime);
 		    return true
@@ -112,9 +114,9 @@ function getValueSetter (lab,val,n) {
 		}
 	    }
 	    if (valueWidgets.length > 1 && doExtraCheck) {
-		newVals = valueWidgets.map(function () {return this.value}).slice(1)
+		var newVals = valueWidgets.map(function () {return this.value}).slice(1)
 		if (newVals.toArray().toString()!=origVals.toArray().toString()) {
-		    log('Updated %s to %s!',origVals.toArray().toString(),newVals.toArray().toString())
+		    log('Updated __ to __!',origVals.toArray().toString(),newVals.toArray().toString())
 		    timer = new Date().getTime()
 		    waitTime = 500;
 		}
@@ -147,7 +149,7 @@ function spawnWaiter (url, onComplete) {
 
 
 function setTable (data) {
-    actions = []
+    var actions = []
     for (var cat in data) {
 	log('cat',cat,':',data[cat])
 	actions.push(getValueSetter(cat,data[cat]));
@@ -301,7 +303,7 @@ function getAssignmentsFromGradebook () {
     //log('rows at this point: %s',rows.toString())
     appendToRows(rightSideBottom,headerLength);
     //log('rows at this point: %s',rows.toString())
-    globals = {'leftSideBottom':leftSideBottom,rightSideBottom:rightSideBottom,
+    gft.getAssignmentsGlobals = {'leftSideBottom':leftSideBottom,rightSideBottom:rightSideBottom,
 	       leftSideHeader:leftSideHeader, rightSideHeader:rightSideHeader}
     return rows
 }
@@ -350,12 +352,12 @@ function TableObject (data) {
 		var curcell = self.getCell(rh,ch);
 	    }
 	    catch (err) {
-		log('Got error: %s (self=%s)',err,self);
-		log('Unable to locate cell %s, %s',rh,ch);
+		log('Got error: __ (self=__)',err,self);
+		log('Unable to locate cell __, __',rh,ch);
 		var da = GenericDelayedAction(showError)
 		function showError () {
 		    log('We had an error - now we show it')
-		    log('Unable to locate cell %s, %s',rh,ch);
+		    log('Unable to locate cell __, __',rh,ch);
 		    self.showError && self.showError(
 			'Unable to locate cell '+rh+','+ch
 		    );
@@ -427,15 +429,15 @@ function TableObject (data) {
 	    $(curcell).find('input').val(val);
 	    var input = $(curcell).find('input')[0];
 	    if (input) {input.dispatchEvent(new MouseEvent("click"));}
-	    else {log('No input found for %s',curcell)}
+	    else {log('No input found for __',curcell)}
 	    if (commentContent) {
-		log('Got commentContent %s, clicking',commentContent);
+		log('Got commentContent __, clicking',commentContent);
 		var imgLink = $(curcell).find('img')
 		var onclick = imgLink[0].getAttribute('onclick');
 		var re = /.*doPopup\(['"]([^\),'"]*)/;
 		var onclickUrl = re.exec(onclick)[1]
 		onclickUrl = onclickUrl.trim();
-		log('Onclick URL=%s',onclickUrl);
+		log('Onclick URL=__',onclickUrl);
 		const context = 'comment'
 		chrome.runtime.sendMessage(
 		    {'mode':'register',
@@ -464,7 +466,7 @@ function TableObject (data) {
 		}
 	    }
 	}
-	log('Setting colHeader to: "%s"',textContent);
+	log('Setting colHeader to: "__"',textContent);
 	obj.colHeaders.push(textContent);
     }
     for (var row of data) {
@@ -505,7 +507,7 @@ function commentAction (comment) {
     var done = false
     // Now we have to fire off a bunch of actions...
     // Step 1. register our actions...
-    log('commentAction %s',comment);
+    log('commentAction __',comment);
     if (comment) {
 	chrome.runtime.sendMessage(
 	    {mode:'register',
@@ -598,7 +600,7 @@ function fillOutStandard () {
 
 function fillOutReportingStandard (std) {
     // Register action...
-    actions = []
+    var actions = []
     var delay
     actions.push(getValueSetter('Name',std.name));
     actions.push(getValueSetter('Column header',std.header));
@@ -611,7 +613,7 @@ function fillOutReportingStandard (std) {
 
 
 function getFillOutAssignmentActions (data) {
-    actionList = []
+    var actionList = []
     //actionList.push(DelayedTimerAction(function () {clickOptionsAction('Add')},500));
 
     for (var label in data) {
@@ -639,7 +641,7 @@ function getFillOutAssignmentActions (data) {
 
 
 function testFillOutAssignment () {
-    actions = getFillOutAssignmentActions(	    {		'Category':'WH','GB column name':'Test GB','Assignment name':'Test-1','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':8,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'});
+    var actions = getFillOutAssignmentActions(	    {		'Category':'WH','GB column name':'Test GB','Assignment name':'Test-1','Date assigned':'2/15/2017','Date due':'2/17/2017','Total points':8,'Extra credit points':1,'Grade Scale':'Current High School Grade Scale','Grade Term':'S2'});
     loopThroughActions(actions)
 }
 
@@ -657,7 +659,7 @@ function testAddAssignments () {
 function topTabAction (tabName) {
     var $el = $("#header a:contains('"+tabName+"')")
     var href = $el.attr('href');
-    clickTab = function () {$el[0].dispatchEvent(new MouseEvent('click'));}
+    var clickTab = function () {$el[0].dispatchEvent(new MouseEvent('click'));}
     return {'url':href, 'click':clickTab}
 }
 
@@ -748,6 +750,7 @@ function UserInterface () {
     self.urls = [
 	[/.*/, function () {
 	    // branding
+            console.log('Loading branding');
 	    showBrand = Button('Aspen Automator', function () {
 		myBrand = $(`<div>
              <h2>Aspen Automator</h2>
@@ -769,6 +772,15 @@ function UserInterface () {
 	    });
 	    $('.applicationTitle').append(showBrand);
 	    $('.applicationTitle').closest('table').css({'width':'650px'});
+            self.progress = $('<div class="aa-progress-indicator"></div>');
+            self.progress.title = $('<h3></h3>')
+            self.progress.message = $('<p></p>')
+            self.progress.loader = $('<progress></progress>');
+            self.progress.append(self.progress.title)
+            self.progress.append(self.progress.loader)
+            self.progress.append(self.progress.message)
+            $('body.bodyBackground').append(self.progress) // specify class so we don't insert ourselves into iframe text boxes etc.
+            self.progress.css({display:'none'})
 	}],
 	[/.*/, function () {
 	    b1 = Button('⟳',function () {
@@ -833,7 +845,7 @@ function UserInterface () {
 	    };
 
 	    addToOptionBar(
-		Button('Import Assignments for Multiple Classes', function () {
+		Button('Import Multiple Classes', function () {
 		    log('Add multi-assignments');
 		    $popup = makePopup();
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
@@ -856,12 +868,12 @@ function UserInterface () {
 					assignment[f] = val;
 				    }
 				    else {
-					log('No value for %s',f);
+					log('No value for __',f);
 				    }
 				}
 				assignments.push(assignment);
 			    }
-			    log('Pushing assignments: %s',assignments);
+			    log('Pushing assignments: __',assignments);
 			    var byClass = {}
 			    assignments.forEach((a)=>{
 				if (!byClass[a['Course Code']]) {
@@ -945,13 +957,13 @@ function UserInterface () {
         // Google Classroom Assignment Import
         [/assignmentList.do/,function () {
             addToOptionBar(
-                Button('Import Google Classroom Assignments', ()=>{
+                Button('Import from Google Classroom', ()=>{
                     var gcp = GoogleClassroomPicker( 
                         'Import Google Classroom Assignments',
                         (assignments)=>{
                             console.log('GOT ASSIGNMENTS YEAH!');
                             //var assgns = assignments // why was this line here???
-                            console.log('We have %s to work with',assignments.length);
+                            log('Got assignments: We have __ to work with',assignments.length);
                             assignments.forEach((a)=>{
                                 a.Category = prefs.get('DefaultCategory','WH');  // 'WH';
                                 a['GB column name'] = a.aspenShort;
@@ -963,7 +975,7 @@ function UserInterface () {
                                 a['Grade Scale'] = prefs.get('DefaultScale','Current High School Grade Scale');
                                 a['Grade Term'] = prefs.get('DefaultTerm','S1'); // 'S2';
                             });
-                            console.log('Now let\'s import them!')
+                            log('Now let\'s import them!')
                             addAssignmentsFromAssignmentsTab(assignments);
                         }
                     );
@@ -1011,7 +1023,7 @@ function UserInterface () {
 	
         [/staffGradeInputContainer.do/, function () {
             addToOptionBar(
-                Button('Import Google Classroom Grades', ()=>{
+                Button('Import from Google Classroom', ()=>{
                     gcp = GoogleClassroomPicker(
                         'Import Google Classroom Grades',
                         (assignments)=>{
@@ -1020,21 +1032,41 @@ function UserInterface () {
                             function getName (name) {
                                 if (mytable.colHeaders.indexOf(name)>-1) {
                                     return name
-                                }
+                                }                                
                                 var matcher = new RegExp(name,'i')
                                 for (var i=0; i<mytable.rowHeaders.length; i++) {
                                     if (matcher.exec(mytable.rowHeaders[i])) {
+                                        //console.log('WARNING: case insensitive match, mapping %s => %s',name,mytable.rowHeaders[i]);
                                         return mytable.rowHeaders[i]
                                     }
                                 }
+                                // Fallbacks... let's try matching any last name (Jr./III/etc)
+                                console.log('Try name fallback - wildcard on last name suffixes/additions',name.replace(/,/,'.*,.*'));
+                                matcher = new RegExp(name.replace(/,/,'.*,.*'),'i');
+                                for (var i=0; i<mytable.rowHeaders.length; i++) {
+                                    if (matcher.exec(mytable.rowHeaders[i])) {
+                                        console.log('WARNING: Imprecise match, mapping %s => %s',name,mytable.rowHeaders[i]);
+                                        return mytable.rowHeaders[i]
+                                    }
+                                }
+                                // Next level... let's try just matching on last name...
+                                console.log('Try name fallback - wildcard on first name',name.replace(/,.*$/,',.*'));
+                                matcher = new RegExp(name.replace(/,.*$/,',.*'),'i');
+                                for (var i=0; i<mytable.rowHeaders.length; i++) {
+                                    if (matcher.exec(mytable.rowHeaders[i])) {
+                                        console.log('WARNING: Imprecise match, mapping %s => %s',name,mytable.rowHeaders[i]);
+                                        return mytable.rowHeaders[i]
+                                    }
+                                }
+                                return name; // fallback
                             }
 
                             function getAssignment (encId) {
                                 var results = mytable.colHeaders.filter((h)=>h.indexOf(encId)==0)
                                 if (results.length > 1) {
-                                    console.log('WARNING: MORE THAN ONE ASSIGNMENT WITH SAME ID AAAAAAAAACCCCCK');
+                                    log('WARNING: MORE THAN ONE ASSIGNMENT WITH SAME ID AAAAAAAAACCCCCK');
                                     console.log(results)
-                                    console.log('Matching ID: %s',encId);
+                                    log('Matching ID: __',encId);
                                 }
                                 if (results) {return results[0]}
                             }
@@ -1058,8 +1090,9 @@ function UserInterface () {
                                     //comment - no need
                                 )
                             );
-                            glactions = actions // global!
-                            console.log('Not working: here are some globals - mytable, asss, glactions');
+                            gft.getName = getName;
+                            gft.assignments = assignments;
+                            gft.glactions = actions // global!
                             loopThroughActions(actions);
 
                             
@@ -1203,7 +1236,7 @@ function UserInterface () {
 		    assignment[f] = val;
 		}
 		else {
-		    log('No value for %s',f);
+		    log('No value for __',f);
 		}
 	    }
 	    assignments.push(assignment);
@@ -1221,10 +1254,10 @@ function UserInterface () {
 	// actionCallback(csvDataAsArrayofObjects, MapperFunctionToGoFromMapfieldToCSVField)
 	// the mapper function takes the form...
 	// doMap(CSVROW,FIELDNAME) -> VALUE
-        console.log('csvDataHandler got args:  %s %s %s',mapfields,actionLabel,actionCallback);
+        log('csvDataHandler got args:  __ __ __',mapfields,actionLabel,actionCallback);
 	var obj = {}
-	obj.$ui = $('<div>');
-	obj.$buttonArea = $('<span>');
+	obj.$ui = $('<div class="aa-csv-data-handler">');
+	obj.$buttonArea = $('<span class="aa-csv-data-handler-button-area">');
 	var mapper;
         
         function handleEvent (d) {
@@ -1233,10 +1266,11 @@ function UserInterface () {
         }
 
         function handleCsv (csvObj) {
-	    log('Got CSV OBJ %s!',csvObj);
+	    log('Got CSV OBJ __!',csvObj);
 	    var fields = [];
 	    for (var field in csvObj[0]) {fields.push(field)};
-	    mapper = makeCSVMapper(mapfields,fields) 
+	    var mapper = makeCSVMapper(mapfields,fields)
+            debugger;
 	    obj.$ui.append(mapper.$div);
 	    obj.$buttonArea.append(Button(
 		actionLabel,
@@ -1249,12 +1283,12 @@ function UserInterface () {
         }
 
 	function handleData (input) {
-	    csvObj = $.csv.toObjects(input);
+	    var csvObj = $.csv.toObjects(input);
             return handleCsv(csvObj);
 	}
 
 	function handleFiles (files) {
-	    log('got files: %s',files);
+	    log('got files:',files);
 	    var file = files[0]
 	    var reader = new FileReader();
 	    reader.onload = handleEvent;
@@ -1265,7 +1299,7 @@ function UserInterface () {
         obj.handleData = handleData;
         obj.handleCsv = handleCsv;
 
-        console.log('Creating data handler: %s',obj);
+        log('Creating data handler: __',obj);
         globobj = obj;
         console.log('debugging object: globobj');
         return obj;
@@ -1283,21 +1317,22 @@ function UserInterface () {
 	var obj = csvDataHandler(mapfields, actionLabel, actionCallback);
 	$input.change(function () {obj.handleFiles(this.files)});
 	obj.$input = $input;
-        console.log("CREATED FILE HANDLER %s",obj);
+        console.log("CREATED FILE HANDLER __",obj);
 	return obj
     }
 
 
     function makeCSVMapper (labels, valueOptions) {
-        console.log('Make mapper %s %s',labels,valueOptions);
+        console.log('Make mapper __ __',labels,valueOptions);
 	var mid = 'aa-select-'+mid_increment
 	mid_increment += 1;
-
+        
+        
 	var Mapper = {
 	    getData : function () {
 		var data = {}
-		self.$div.find('.fieldSelector').each(
-		    function (idx,fs) {
+		this.$div.find('.fieldSelector').each(
+		    (idx,fs) => {
 			var name = $(fs).attr('value')
 			data[name] = $($(fs)
 				       .find('select')[0]
@@ -1325,25 +1360,24 @@ function UserInterface () {
 	    },
 	    
 	    buildUI : function () {
-		self = this;
-		self.$div = $('<div class="aa-mapper" id="'+mid+'">');
-		self.$select = $('<select class="aa-field-select"><option value="">-</option></select>');
-		log('Got select: %s',self.$select);
-		valueOptions.forEach(function (f) {self.$select.append('<option value="'+f+'">'+f+'</option>')});
-		$other = $('<option value="::other">::Other</option>');			    
-		self.$select.append($other);
+		//self = this;
+		this.$div = $('<div class="aa-mapper" id="'+mid+'">');
+		this.$select = $('<select class="aa-field-select"><option value="">-</option></select>');
+		log('Got select:',this.$select);
+		valueOptions.forEach( (f) => this.$select.append('<option value="'+f+'">'+f+'</option>'));
+		var $other = $('<option value="::other">::Other</option>');			    
+		this.$select.append($other);
 		for (var header of labels) {
-		    $fieldSelector = $('<div class="fieldSelector" value="'+header+'">'+header+' :</div>')
-		    self.$div.append($fieldSelector)
+		    var $fieldSelector = $('<div class="fieldSelector" value="'+header+'">'+header+' :</div>')
+		    this.$div.append($fieldSelector)
 		}
 		
 	    },
 
 	    finishUI : function () { // must be called after we're attached to DOM
-		self = this;
-		$('#'+mid+' .fieldSelector').append(self.$select);
+		$('#'+mid+' .fieldSelector').append(this.$select);
 		$('#'+mid+' .fieldSelector').append($('<input class="aaother" type="text">').hide());
-		$('#'+mid+' .fieldSelector select').change(function () {
+		$('#'+mid+' .fieldSelector select').change( function () {
 		    log('Changed value!');
 		    if (this.value=='::other') {
 			log('show other');
@@ -1353,29 +1387,29 @@ function UserInterface () {
 		$('#'+mid+' .fieldSelector').each(function (idx, fs) {
 		    var header = $(fs).attr('value');
 		    $(fs).find('option').each(
-			function (idx, o) {
+			(idx, o) => {
 			    var v = $(o).val()
-			    //log("Check %s against %s",header,v);
+			    //log("Check __ against __",header,v);
 			    if (header && v) {
 				if (v.indexOf(header)>-1||header.indexOf(v)>-1) {
 				    fs.selected = v;
 				    log('We better select this baby!');
-				    select = $(fs).children('select')[0];
+				    var select = $(fs).children('select')[0];
 				    select.value = v; select.selected = v;
-				    log('Set value to: %s',v);
-				    log('Set selected to %s',v)
+				    log('Set value to: __',v);
+				    log('Set selected to __',v)
 				}
 			    }
 			});
 		}) // end setting values.
-		return self.$div
+		return this.$div
 	    },
 	}
 	try {
 	    Mapper.buildUI()
 	}
 	catch (e) {
-	    log('Error: %s',e);
+	    log('Error: __',e);
 	}
 	return Mapper
     }
@@ -1383,7 +1417,7 @@ function UserInterface () {
 
     function makePopin () {
 	var $popin = $('<div class="aa-popin"></div>');
-	$button = $('<span class="aa-slideButton">&gt;</span>');
+	var $button = $('<span class="aa-slideButton">&gt;</span>');
 	$popin.append($button);
 	//$popin.append($('<ul><li>Here</li><li>Is a test</li><li>Of the pop-in</li></ul>'));
 	$popin.body = $('<div class="aa-popinbody"></div>')
@@ -1405,9 +1439,9 @@ function UserInterface () {
 
     function makePopup () {
 	var $popup = $('<div class="aa-popup"><div class="aa-buttonbar"></div></div>');
-	$body = $('<div class="aa-body"></div>');
-	$buttonbar = $('<div class="aa-buttonbar"></div>');
-	$close = Button('Close',function () {$popup.hide()});
+	var $body = $('<div class="aa-body"></div>');
+	var $buttonbar = $('<div class="aa-buttonbar"></div>');
+	var $close = Button('Close',function () {$popup.hide()});
 	$buttonbar.append($close);
 	$popup.append($body);
 	$popup.append($buttonbar);
@@ -1423,8 +1457,8 @@ function UserInterface () {
 	function doAdd (el) {
 	    var $optionCells = $('.optionsBar > tbody > tr > td')
 	    var $buttonCell = $($optionCells[$optionCells.length-2])
-            $spacer = $('<td width="1"><img src="images/spacer.gif" height="1" width="7"></td>');
-	    $td = $('<td class="aa-option-cell"></td>');
+            var $spacer = $('<td width="1"><img src="images/spacer.gif" height="1" width="7"></td>');
+	    var $td = $('<td class="aa-option-cell"></td>');
             $td.append($spacer);
 	    $td.append(el)
 	    $buttonCell.after($td);
@@ -1449,7 +1483,7 @@ function UserInterface () {
     
     // BUTTON CONVENIENCE FUNCTIONS
     function Button (txt, callback) {
-	$b = $('<span>')
+	var $b = $('<span>')
 	$b.addClass('aa-button');
 	$b.click(callback)
 	$b.append(txt);
@@ -1457,7 +1491,7 @@ function UserInterface () {
     }
 
     self.getUrlActions = function (url) {
-	ff = []
+	var ff = []
 	for (var urlPair of self.urls) {
 	    var matcher = urlPair[0]
 	    var f = urlPair[1]
@@ -1467,20 +1501,22 @@ function UserInterface () {
     }
 
     self.updateInterface = function () {
-	var ff = self.getUrlActions(document.URL);
-	if (ff) {
-	    log('Found %s interfaces for: %s',ff.length,document.URL);
-	    for (var f of ff) {f()}
-	}
-	else {
-	    log('No interface for: %s',document.URL);
-	}
+        return new Promise((resolve,reject)=>{
+	    var ff = self.getUrlActions(document.URL);
+	    if (ff) {
+	        log('Found __ interfaces for: __',ff.length,document.URL);
+	        for (var f of ff) {f()}
+	    }
+	    else {
+	        log('No interface for: __',document.URL);
+	    }
+            resolve()
+        })
     }
-
 
     /* Functions to load and confirm outside data sources */
     self.loadAssignmentData = function (data) {
-        console.log("GOTDATA: %s",JSON.stringify(data));
+        log("Assignment Data GOTDATA: __",JSON.stringify(data));
         var $popup = makePopup();
         var dh = csvDataHandler(
             assignmentFields,
@@ -1491,6 +1527,7 @@ function UserInterface () {
 	$popup.body.append(
 	    dh.$ui
 	);
+        debugger;
         dh.handleData(data);
     }
     
@@ -1515,8 +1552,8 @@ function UserInterface () {
             GCIDs = {}
         }
         else {
-            console.log('Beginning with GCIDs from memory!');
-            console.log(GCIDs);
+            log('Google Classroom Picker Beginning with GCIDs from memory!');
+            log(GCIDs);
         }
         var _lastClass = ''
         if (!params) {params = {getGrades : false}}
@@ -1533,8 +1570,8 @@ function UserInterface () {
                 }
                 if (_lastClass) {
                     GCIDs[getCurrentGradebookClass()] = _lastClass;
-                    console.log('Updated GCID=>',JSON.stringify(GCIDs));
-                    console.log('Save associaton: %s=>%s',getCurrentGradebookClass(),_lastClass);
+                    log('Updated GCID=>',JSON.stringify(GCIDs));
+                    log('Save associaton: __=>__',getCurrentGradebookClass(),_lastClass);
                     prefs.set('GCID',GCIDs);
                 }
                 else {
@@ -1554,7 +1591,7 @@ function UserInterface () {
         }
         var $popup = makePopup();
         var $actionButton;
-        var $waiting = $(`<div><h2>${header}</h2>
+        var $waiting = $(`<div class="aa-loader-message"><h2>${header}</h2>
     <h3>Loading Classes from Google...</h3>
     <p>In just a second this will have something useful.
     </p></div>`);
@@ -1569,12 +1606,12 @@ function UserInterface () {
         function fetchGrades () {
             var course = obj.getSelectedClass();
             var assignments = obj.getSelectedAssignments();
-            //console.log('fetchGrades: assignments=>%s',JSON.stringify(assignments))
+            //console.log('fetchGrades: assignments=>__',JSON.stringify(assignments))
             if (!assignments||assignments.length==0) {
                 console.log('Weird -- no assignments');
             }
             $popup.body.empty();
-            $popup.body.append(`<div><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div>`);
+            $popup.body.append(`<div class="aa-loader-message"><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div>`);
             chrome.runtime.sendMessage(
                 {mode:'classroom',
                  method:'listSubmissions',
@@ -1582,7 +1619,7 @@ function UserInterface () {
                  assignments:assignments.map((a)=>a.id),
                 },
                 function (assessmentData) {
-                    console.log('Got grades! %s',assessmentData);
+                    log('Got grades! __',assessmentData);
                     asss = assessmentData; // gloabl for debug
                     $popup.body.append(`<p>${assessmentData.join('<br>')}</p>`);
                     $popup.body.append('<h4>FIXME</h4>')
@@ -1595,7 +1632,7 @@ function UserInterface () {
 
         function BoolPrefSetter (label, pref, defaultVal) {
             mid_increment += 1;
-            var $span = $('<div></div>');
+            var $span = $('<div class="aa-pref-setter"></div>');
             var $input = $(`<input input="aa-input-${mid_increment}" type="checkbox" checked="${prefs.get(pref,defaultVal)}">`);
             var $label = $(`<label for="aa-input-${mid_increment}">${label}:</label> `);
             $span.append($label)
@@ -1603,7 +1640,7 @@ function UserInterface () {
 
             $input.change(
                 function () {
-                    console.log('Update pref %s',pref,this.checked);
+                    log('Update pref __',pref,this.checked);
                     prefs.set(pref,this.checked);
                 });
             
@@ -1612,7 +1649,7 @@ function UserInterface () {
 
         function TextPrefSetter (label, pref, defaultVal) {
             mid_increment += 1;
-            var $span = $(`<div></div>`);
+            var $span = $(`<div clas="aa-pref-setter"></div>`);
             var $input = $(`<input id="aa-input-${mid_increment}" type="text" value="${prefs.get(pref,defaultVal)}">`);
             var $label = $(`<label for="aa-input-${mid_increment}">${label}: </label> `);
             $span.append($label);
@@ -1620,7 +1657,7 @@ function UserInterface () {
 
             $input.change(
                 function () {
-                    console.log('Update pref %s',pref,this.value);
+                    log('Update pref __',pref,this.value);
                     prefs.set(pref,this.value);
                 }
             );
@@ -1629,7 +1666,7 @@ function UserInterface () {
         }
 
         function DefaultValueSetter () {
-            var $div = $('<div>');
+            var $div = $('<div class="aa-pref-setter">');
             $div.append(TextPrefSetter('Category','DefaultCategory','WH'));
             $div.append(TextPrefSetter('Grade Term','DefaultTerm','S1'));
             $div.append(TextPrefSetter('Grade Scale','DefaultScale','Current High School Grading Scale'));
@@ -1641,7 +1678,7 @@ function UserInterface () {
         function fetchAssignments () {
             var course = obj.getSelectedClass()
             $popup.body.empty();
-            $popup.body.append(`<div><h2>${header}</h2>
+            $popup.body.append(`<div class='aa-assignment-fetch"><h2>${header}</h2>
                 <h3>Fetching assignment data...</h3>
                 <p>Fetching assignment data for class ${course.name} (${course.id})</p>
                 <p>...</p>
@@ -1684,7 +1721,7 @@ function UserInterface () {
             var currentClass = getCurrentGradebookClass();
             var courseObj = GCIDs[currentClass]
             if (courseObj) {
-                console.log('Using saved course association: %s=>%s',currentClass,courseObj);
+                console.log('Using saved course association: __=>__',currentClass,courseObj);
                 obj.courseViaPref = courseObj;
                 fetchAssignments();
             }
@@ -1708,7 +1745,7 @@ function UserInterface () {
 
         function CoursePicker (data) {
             courseData = data; // global!
-            var $picker = $(`<div><h2>${header}</h2><h3>Pick Google Classroom</h3></div>`);
+            var $picker = $(`<div class="aa-course-picker"><h2>${header}</h2><h3>Pick Google Classroom</h3></div>`);
             var $courseList = $('<ul></ul>');
             $picker.append($courseList);
             data.courses.forEach(
@@ -1719,7 +1756,7 @@ function UserInterface () {
         }
 
         function AssignmentPicker (data) {
-            var $picker = $('<div><h3>Pick Assignments to Load</h3></div>');
+            var $picker = $('<div class="aa-picker"><h3>Pick Assignments to Load</h3></div>');
             var $ul = $('<ul></ul>')
             $picker.append($ul);
             
@@ -1734,7 +1771,7 @@ function UserInterface () {
     }
 
 
-
+    
     return self;
 } // end UserInterface
 
@@ -1749,21 +1786,26 @@ function Poller (ui) {
     var self = {}
 
     self.doAction = function (action) {
-	log('Do action %s',JSON.stringify(action));
+	log('Do action __',JSON.stringify(action));
+        if (!gft.actions) {
+            gft.actions = []
+        }
+        gft.actions.push({action:action,stamp:new Date()});
 	switch (action.name) {
         case "sendAssignmentData":
-            console.log('Got data: %s',action.data);
+            console.log('Got data: __',action.data);
             globact = action.data
             ui.loadAssignmentData(action.data.text);
             self.complete(action);
             break;
         case "sendGradeData":
-            console.log('Got data: %s',action.data);
+            console.log('Got data: __',action.data);
             globact = action.data;
             ui.loadGradeData(action.data.text);
             self.complete(action);
             break;
 	case "comment":
+            console.log('Got comment: __',action.data);
 	    commentAction(action.main,action.private);
 	    chrome.runtime.sendMessage({'mode':'complete',
 					'url':document.URL,
@@ -1772,6 +1814,7 @@ function Poller (ui) {
 				      );
 	    break;
 	case "writeText":
+            console.log('Got writeText: __',action.data);
 	    writeText(action.text);
 	    chrome.runtime.sendMessage({'mode':'complete',
 					'url':document.URL,
@@ -1781,8 +1824,9 @@ function Poller (ui) {
 	    break;
 
 	case "createAssignments":
+            console.log('Got createAssignments: __',action.data);
 	    // Register multiple assignments :)
-	    log('Got action: create multiple assignments %s',action.data);
+	    log('Got action: create multiple assignments __',action.data);
 	    addAssignmentsFromAssignmentsTab(
 		action.data,
 		action.next
@@ -1791,10 +1835,11 @@ function Poller (ui) {
 	    break;
 
 	case "createAssignment":
-	    log('Got action: createAssignment %s',JSON.stringify(action));
+            console.log('Got createAssignment (singular): __',action.data);
+	    log('Got action: createAssignment __',JSON.stringify(action));
 	    var actions = getFillOutAssignmentActions(action.assignment);
 	    var finishIt = function ()   {
-		log('Sending complete signal %s',action);
+		log('Sending complete signal __',action);
 		chrome.runtime.sendMessage({'mode':'complete',
 					    'url':document.URL,
 					    'action':action},function () {log('Completed async')});
@@ -1808,7 +1853,7 @@ function Poller (ui) {
 
 
 	case "selectClass":
-	        log('selectClass %s',action);
+	    log('selectClass __',action);
 	    self.complete(action); // complete first so we know the code runs :)
 	    selectClass(action.classname)
 	    break;
@@ -1820,7 +1865,7 @@ function Poller (ui) {
 	    break;
 
 	case "sideTab":
-	    log("sideTab %s',action");
+	    log("sideTab __',action");
 	    self.complete(action); // complete first so we know the code runs :)
 	    sideTab(action.tab).click();
 	    break;
@@ -1828,23 +1873,23 @@ function Poller (ui) {
 
 	case "multiClass":
 	    var found;
-	    log("multiClass action %s",JSON.stringify(Object.keys(action)));
+	    log("multiClass action __",JSON.stringify(Object.keys(action)));
 	    var curClass = getCurrentClassFromKeys(action.data)
 	    found = curClass && true || false;
 	    var actions = []
 	    if (found && action.data[curClass] && action.data[curClass].length > 0) {
-		log('We have data to enter for this class! %s',curClass)
-		log('%s rows of data: ',action.data[curClass].length);
+		log('We have data to enter for this class! __',curClass)
+		log('__ rows of data: ',action.data[curClass].length);
 		log('Wait a sec...');
 		setTimeout(function () {
 		    log('Go!');
 		    setGrademodeAll(
 			function () {
 			    mytable = TableObject(getAssignmentsFromGradebook());
-			    log('Entering grade data: %s',action.data[curClass]);
+			    log('Entering grade data: __',action.data[curClass]);
 			    for (var i=0; i<action.data[curClass].length; i++) {
 				var row = action.data[curClass][i]
-				log('Working with data: %s',row);
+				log('Working with data: __',row);
 				actions.push(mytable.setCellDelayed.apply(this,row));
 			    }
 			    action.data[curClass] = false; // done!
@@ -1866,10 +1911,10 @@ function Poller (ui) {
 		},3000); // 3 second wait
 	    }
 	    else {
-		log('No data for this class: %s',curClass);
+		log('No data for this class: __',curClass);
 		for (var classname in action.data) {
 		    if (action.data[classname].length>0) {
-			log('Switch to %s to complete %s rows',classname,action.data[classname].length);
+			log('Switch to __ to complete __ rows',classname,action.data[classname].length);
 			chrome.runtime.sendMessage({
 			    mode:'register',
 			    url:'staffGradeInputContainer.do?navkey=gradebook.classes.list.input',
@@ -1895,7 +1940,7 @@ function Poller (ui) {
 		// Great, Let's add this class
 		var curClassData = action.data[curClass];
 		delete action.data[curClass] // remove curClass from data...
-		log('Register data for %s',curClass);
+		log('Register data for __',curClass);
 		chrome.runtime.sendMessage({
 		    mode:'register',
 		    url:'gradebook.classes.list.gcd',
@@ -1921,7 +1966,7 @@ function Poller (ui) {
 			url:'gradebook.classes.list.gcd',
 			action : {...action}
 		    });
-		    log('Switch to %s',classes[0]);
+		    log('Switch to __',classes[0]);
 		    switchClass(classes[0],'assignments');
 		    // DO NOT COMPLETE...
 		    return
@@ -1937,20 +1982,21 @@ function Poller (ui) {
             console.log('Got request to make backend sleep: let\'s do that now...');
             chrome.runtime.sendMessage(
                 {
-                    mode:sleep,
-                    time:action.time
+                    mode:'sleep',
+                    time:action.time,
+                    originalAction:action,
                 },
                 (r)=>{
-                    console.log('Backend done sleeping...');
-                    self.complete(action); // let us complete!
+                    log('Backend done sleeping... it will complete itself :)');
+                    //self.complete(action); // let us complete!
                 }
             )
             break;
 
 
 	default:
-	    log('No handler for action: %s',action.name);
-	    log('Complete action: %s',JSON.stringify(action));
+	    log('No handler for action: __',action.name);
+	    log('Complete action: __',JSON.stringify(action));
 	} // end switch
 
     }
@@ -1960,7 +2006,7 @@ function Poller (ui) {
 	    {mode:'complete',
 	     url:document.URL,
 	     action:action},
-	    function () {'Action marked complete: %s',action}
+	    function () {'Action marked complete: __',action}
 	);
     }
 
@@ -1970,15 +2016,24 @@ function Poller (ui) {
 	     'url':document.URL},
 	    function (action) {
                 if (action) {
-		    console.log('Polling got %s',action);
+		    log('Polling from __ got __',document.URL,action);
                 }
-		if (action==BUSY) {
-		    console.log('Already busy completing a task.');
+		if (action && action.type==BUSY) {
+		    console.log('Already busy completing a task.',action.inprogress);
+                    ui.progress.title.text(`Busy with ${action.inprogress.length} other task${action.inprogress.length!=1&&'s'||''}`)
+                    ui.progress.message.text(getBusyMessage(action.inprogress))
+                    console.log('Show progress!');
+                    ui.progress.slideIn()
 		}
 		else {
 		    if (action) {
-			log('ACTION! Got new action to do: %s',JSON.stringify(action));
+			log('ACTION! Got new action to do: __',JSON.stringify(action));
 			self.doAction(action)
+                        ui.progress.title.text(`Aspen Automator at Work!`)
+                        ui.progress.message.text(getBusymessageForAction(action))
+                        console.log('Show progress!');
+                        ui.progress.slideDown()
+
 		    }
 		}
 		// wait a half second, poll again...
@@ -2021,10 +2076,20 @@ $(document).ready(function () {
     // We need to poll universally...
     var ui = UserInterface()
     var p = Poller(ui)
-    p.runPoll()
+    //p.runPoll()
+    
+    gft.poller = p;
+    gft.ui = ui;
 
-
-    setTimeout(ui.updateInterface,500); // delay :)
+    setTimeout(()=>{
+        ui.updateInterface()
+            .then(
+                ()=>{console.log('Interface ready -- run poller');
+                     p.runPoll();
+                    }
+            );
+    },500
+              ); // delay :)
     
     // // if (document.URL.indexOf('common/scFrameContent.html')>1) {
     // // 	// If we are in a message window, grab the context...
@@ -2081,12 +2146,12 @@ $(document).ready(function () {
 
 //select class...
 function selectClass (classname) {
-    log('selectClass(%s)',classname);
+    log('selectClass(__)',classname);
     $('#dataGrid a:contains("'+classname+'")')[0].click();    
 }
 
 function switchClass (classname, nextUp='scores') {    
-    log('Switching class to %s',classname);
+    log('Switching class to __',classname);
     log('Register listeners to switch to class');
     chrome.runtime.sendMessage({
 	'mode':'register',
@@ -2132,29 +2197,23 @@ function Prefs (keys) {
 
         ready (f) {
             if (ready) {
-                console.log('Prefs.ready() run right away');
                 f()
             }
             else {
-                console.log('Prefs.ready - lets hold on a sec');
                 runWhenReady.push(f);
             }
         },
 
         updatePrefs () {
             var self = this;
-            console.log('Fire off updatePrefs...');
             chrome.storage.sync.get(keys, (r)=>{
-                console.log('updatePrefs got prefs! %s',r);
                 keys.forEach(
                     (k)=>{
-                        console.log('Got pref: %s',k);
                         try { 
                             self.prefs[k] = JSON.parse(r[k]);
-                            console.log('Parsed %s => %s',r[k],self.prefs[k]);
                         }
                         catch (err) {
-                            console.log('Error parsing pref key: %s, value: %s',k,r[k]);
+                            console.log('Error parsing pref key: __, value: __',k,r[k]);
                             console.log('Use raw value');
                             self.prefs[k] = r[k];
                         }
@@ -2168,7 +2227,6 @@ function Prefs (keys) {
                     
                 
             });
-            console.log('waiting for prefs...');
         },
 
         get (k, defaultVal) {
@@ -2182,15 +2240,14 @@ function Prefs (keys) {
         set (k, v) {
             var self = this;
             if (keys.indexOf(k)==-1) {
-                throw ['Key %s not registered for prefs %s',k,keys];
+                throw ['Key __ not registered for prefs __',k,keys];
             }
             var setDic = {};
             setDic[k] = JSON.stringify(v);
             self.prefs[k] = v;
-            console.log('Initially setting prefs %s: %s',k,self.prefs[k])
             chrome.storage.sync.set(setDic,
                                      ()=>{
-                                         console.log('Set %s in memory => %s',k,setDic[k]);
+                                         console.log('Set __ in memory => __',k,setDic[k]);
                                      });
         }
 
@@ -2202,16 +2259,35 @@ function Prefs (keys) {
 }
 
 function testPrefs () {
-    p = Prefs(['favoriteColor','favoriteFruit','favoriteDrink','GCIDs']);
+    var p = Prefs(['favoriteColor','favoriteFruit','favoriteDrink','GCIDs']);
     //p.set('favoriteColor','blue');
     console.log('Get favorite color!');
     //p.set('favoriteFruit','banana');
     setTimeout( ()=>{
-        console.log('favorite fruit: %s',p.get('favoriteFruit'));
+        console.log('favorite fruit: __',p.get('favoriteFruit'));
         p.get('favoriteColor');
-        console.log('Got prefs: %s',JSON.stringify(p.prefs));
+        console.log('Got prefs: __',JSON.stringify(p.prefs));
     }, 500);
     return p;
 }
 
-p = testPrefs();
+function getBusyMessage (inProgressActions) {
+    return inProgressActions.map(getBusyMessageForAction).join(', ');
+}
+
+function getBusymessageForAction (action) {
+    const nameMap = {
+        sideTab : (action) => `Switch to tab ${action.tab}`,
+        selectClass : (action) => `Switch to class ${classname}`,
+        backendSleep : (action) => `Wait for Aspen for ${action.time||500}milliseconds`,
+        createAssignment : (action) => `Create Assignment ${JSON.stringify(action.assignment)}`,
+        createAssignments : (action) => `Create Assignments ${JSON.stringify(action.data)}`,
+        writeText : (action) => `Write text ${action.data}`,
+        comment : (action) => `Write comment ${action.data}`,
+        sendGradeData : (action) => `Load Grade Data ${action.data.text}`,
+        sendAssignmentData : (action) => `Load Assignment Data ${action.data.text}`,
+    }
+    return nameMap[action.name] && nameMap[action.name](action) || action.name
+}
+
+globalsForTesting = gft;
