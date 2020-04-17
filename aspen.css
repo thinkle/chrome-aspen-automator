@@ -61,6 +61,56 @@
     --ui-font: Ubuntu, sans-serif;
 }
 
+.aa-progress-indicator {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(0,0,0,0.6);
+    color: #33ff33;
+    border : 3px solid var(--abutton);
+    padding: 7px;
+    max-height: 100px;
+    overflow: scroll;
+}
+
+.aa-error {
+    position: absolute;
+    top: 10vh;
+    right: 0px;
+    background-color: #000000cc;
+    color: red;
+    overflow-y: scroll;
+    max-height: 60vh;
+    max-width: 300px;
+}
+.aa-error * {
+    color: red;
+}
+
+.aa-error button {
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    text-align: center;
+    box-sizing: border-box;
+}
+.aa-error td {
+    padding-bottom: 5px;
+}
+
+.aa-error h3 {
+    text-align: center;
+}
+
+.aa-custom-style .loginBackground {
+    /*background-image: url('https://www.innovationcharter.org/wp-content/uploads/2016/08/MOA-6-01-17-K048-1800x1075.jpg');*/
+    /*background-image: url('https://source.unsplash.com/random/1920x1080');*/
+    background-image: url('https://loremflickr.com/1920/1080/mountains');
+    background-color: white;
+}
+
+
 /* #header {background-color: red !important;
  color: white !important;
 } */
@@ -80,17 +130,14 @@
 }
 
 .aa-button:hover {background-color: var(--aabutton-hover);
-                  font-size: 10pt;
                   color: var(--aabutton-fore);
-                  padding: 5px;
                   box-shadow: 2px 2px 1px #888888;
                  }
 .aa-button:active {background-color: var(--aabutton-hover);
-                   font-size: 10pt;
                    color: var(--aabutton-fore);
-                   padding: 5px;
-                   margin-top: 2px;
-                   margin-left: 2px;
+                   position: relative;
+                   top: 2px;
+                   left: 2px;
                   }
 
 
@@ -223,7 +270,8 @@
 
 .aa-custom-style select {
     padding: 0.5em 3.5em 0.5em 1em;
-    line-height: 1.5em;
+    line-height: 1.2em;
+    font-size: 10px;
     display: inline-block;
     margin: 0;
     box-sizing: border-box;
@@ -311,27 +359,45 @@
     color: var(--on-lightlight);
 }
 
-img.whiteDownArrow {
+.aa-custom-style img.whiteDownArrow {
     display: none;
 }
 
-.downArrow {
+.aa-custom-style .downArrow {
     position: relative;
     padding-right: 17px !important;
 }
 
-.downArrow.c2Background {
+.aa-custom-style .downArrow.c2Background {
     /*margin-right: -15px;*/
 }
 
-img[src="images/spacer.gif"] {
+.aa-custom-style img[src="images/spacer.gif"] {
     display: none;
 }
 
-.toolbarItem {
+.aa-custom-style .toolbarItem {
     padding-top: 2px !important; /* was 20px */
     padding-bottom: 5px !important;  /* was 20px */
+    padding-left: 0px !important;
+    padding-right: 0px !important;
 }
+
+/* Make more space... */
+.aa-custom-style .gbHeaderTextBox {
+    padding: 2px !important;/* reduce padding from 9px */
+}
+.aa-custom-style .gbHeaderText {
+    display: inline-block; /* Put on same line as sub-header */
+}
+.aa-custom-style .gbSubHeaderText {
+    display: inline-block;
+}
+.aa-custom-style .optionsBar {
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+}
+
 /* Meh -- the arrow looks dumpy anyway */
 /* .downArrow.c2Background::after { */
 /*     content : "▼"; */
@@ -462,7 +528,7 @@ img[src="images/spacer.gif"] {
 
 .aa-custom-style .c1Background,.aa-custom-style .c1Background a
 {
-    background-color: var(--mid);
+    background-color: var(--mid) !important;
     color: var(--on-mid);
 }
 
@@ -622,6 +688,18 @@ img[src="images/spacer.gif"] {
 .aa-custom-style .staffView {
     border-bottom: var(--staff-underline);
 }
+.aa-custom-style .lightTitle {
+
+    position: relative;
+}
+.aa-custom-style .loginBackground .lightTitle::after {
+    content: 'style by AspenAutomator';
+    font-size: '12px';
+    color : white;
+    position: absolute;
+    right: 53px;
+    bottom: 20px;
+}
 
 .aa-custom-style .lightTitle,.aa-custom-style .toolbarText,.aa-custom-style .toolBarItem {
     color: var(--on-top);
@@ -633,6 +711,21 @@ img[src="images/spacer.gif"] {
 .aa-custom-style .schoolView .lightTitle, .aa-custom-style .schoolView .toolbarText,.aa-custom-style .schoolView .toolBarItem {
     color: var(--on-school);
 }
+
+/* Hide stuff we never use */
+.aa-custom-style #pageMenuContainer {
+    display:none;
+}
+.aa-custom-style #editPageButton {
+    display: none;
+}
+.aa-custom-style #editPageButton.showExtra {
+    display: block;
+}
+.aa-custom-style #editPageButton.showExtra {
+    display:block;
+}
+
 
 
 /* I rolled my own version of their JQuery
@@ -652,6 +745,7 @@ img[src="images/spacer.gif"] {
 .aa-custom-style .ui-helper-hidden {
     display: none;
 }
+
 .aa-custom-style .ui-helper-hidden-accessible {
     border: 0;
     clip: rect(0 0 0 0);
@@ -1746,3 +1840,4 @@ a.aa-custom-style .ui-button:active,
     -webkit-box-shadow: 0px 0px 5px #666666;
     box-shadow: 0px 0px 5px #666666;
 }
+
