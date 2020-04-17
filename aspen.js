@@ -451,16 +451,19 @@ function TableObject (data) {
 	    else {
 		log('No comment');
 	    }
-	}
+	},
+        showError : function (e) {
+            ui.error.addError(e);
+        }
     }
     
     for (var cell of data[0]) {
-	textContent = cell.textContent.trim();
+	var textContent = cell.textContent.trim();
 	if (textContent.indexOf('\n') > -1) { // if there's newlines...
 	    // Try to clean this up...
 	    log('Try to clean this baby up: has newlines');
 	    if ($(cell).find('a').length) {
-		links = $(cell).find('a')
+		var links = $(cell).find('a')
 		if (links[0].textContent != '...') {
 		    textContent = links[0].textContent.trim()
 		}
@@ -741,10 +744,14 @@ function testMessaging () {
 /* Our own user interface which gets added to X2 URLs as follows...
 */
 //////////////////////////////////////////////////////////////////
+
+var ui;
 function UserInterface () {
 
-    var self = {}
+    if (ui) {return ui} // singleton!
 
+    var self = {}
+    ui = self; // singleton pattern...
     // URL MAPPING
 
     self.urls = [
@@ -758,7 +765,7 @@ function UserInterface () {
              <a href="http://tomhinkle.net/#/proj/aspen-automator">Aspen Automator</a>.</p>
              <p>The <button class="aa-button">Buttons</button> that look like this come from this add-on.</p>
 <p>If you want to use the Google Classroom import features, you will have to authorize my google apps script app to access your classroom data.</p>
-<a href="https://script.google.com/macros/s/AKfycbw2NEUVEicCMjD0stwgUz5MwLCa_IeP2qIuxB8_qfxZiRqgYjo/exec?authorize=true">Click Here to Authorize Google Apps Connection</a>
+<a target="_BLANK" href="https://script.google.com/macros/s/AKfycbw2NEUVEicCMjD0stwgUz5MwLCa_IeP2qIuxB8_qfxZiRqgYjo/exec?authorize=true">Click Here to Authorize Google Apps Connection</a>
              <p>This plugin allows importing CSVs into gradebooks and other long-term wish-list items of mine.</p>
              <p>It relies on automating the Aspen UI, so it will break when they update and YMMV.</p></div>
              `)
@@ -781,6 +788,41 @@ function UserInterface () {
             self.progress.append(self.progress.message)
             $('body.bodyBackground').append(self.progress) // specify class so we don't insert ourselves into iframe text boxes etc.
             self.progress.css({display:'none'})
+
+
+            self.error = $("<div class='aa-error'></div>");
+            self.error.hide = $('<button>&times;</button>');
+            self.error.title = $('<h3>Aspen Automator Errors!</h3>');
+            self.error.title.append(self.error.hide);
+            self.error.hide.on('click',()=>self.error.fadeOut());
+            self.error.table = $('<table><tbody></tbody></table>');
+            self.error.css({display:'none'});
+            self.error.append(self.error.title);
+            self.error.append(self.error.table);
+            $('body.bodyBackground').append(self.error);
+            self.error.errors = [];
+            self.error.addError = function (message) {
+                const timestamp = new Date()
+                const errorMessage = $(`<tr><td valign="top" style="width:98px">${timestamp.toLocaleTimeString()}</td><td valign="top">${message}</td></tr>`);
+                const closeButton = $(`<td><button>&times;</button></td>`)
+                errorMessage.append(
+                    closeButton
+                );
+                closeButton.on('click',
+                               function () {
+                                   errorMessage.fadeOut()
+                                   errorMessage.hidden = true;
+                                   if (self.error.errors.filter((e)=>!e.hidden).length == 0) {
+                                       self.error.fadeOut();
+                                   }
+                               }
+                              );
+                self.error.table.append(errorMessage);
+                self.error.errors.push(errorMessage);
+                self.error.fadeIn();
+            }
+
+            
 	}],
 	[/.*/, function () {
 	    b1 = Button('⟳',function () {
@@ -807,43 +849,11 @@ function UserInterface () {
             $td.append(b2);
 	    $('#contextMenu').parent().before($td);*/
 	}],
-	// TEST CODE
-	//[/.*/, function () {
-	/*    b3 = Button('Test CSV',function () {
-                var $popup = makePopup();
-                var dh = csvDataHandler(
-                    ['Category','GB column name'],
-                    'Test Test',
-                    function (csvData,doMap) {
-                        console.log('got data: %s',JSON.stringify(csvData));
-                        console.log('Row 1 Category: ',doMap(csvData[0],'Category'));
-                        console.log('Row 1 GB: ',doMap(csvData[0],'GB column name'));
-                    }
-                );
-                $popup.buttonbar.append(dh.$buttonArea);
-                $popup.body.append(dh.$ui);
-                dh.handleData(
-                    'header1,header2,header3\n23,24,52\n123,123,123\n431,412,412\n29,951,124\naer,oiuwer,sldkfj'
-                );
-	    })
-	    // b4 = Button('Test Class Switch', function () {
-	    //     switchClass('Science 303-001','scores')
-	    // });
-	    
-	    $td = $('<td>')
-	    $td.append(b3);
-	    $('#contextMenu').parent().before($td)
-	    // $td = $('<td>')
-	    // $td.append(b4);
-	    // $('#contextMenu').parent().before($td)
-
-	}],
-        */
-	// REMOVE TEST CODE SOON
+        
 	[/assignmentList.do/,function () {
 	    handleFiles = function (files) {
 	    };
-
+            /**
 	    addToOptionBar(
 		Button('Import Multiple Classes', function () {
 		    log('Add multi-assignments');
@@ -924,16 +934,16 @@ function UserInterface () {
 		})
 	    );
 
-
+        **/	 
 
 	}
-	 
+
 	], // end multi-assignment
 
-
+        
 	[/assignmentList.do/,function () {
 	    addToOptionBar(
-		Button('Import Assignments', function () {
+		Button('Import from CSV', function () {
 		    log('Add Assignment');
 		    $popup = makePopup();
 	            $input = $('<input type="file" id="csvFileInput" accept=".csv">');
@@ -1104,8 +1114,9 @@ function UserInterface () {
         } // end classroom gradebook import
         ],
 
-
+        
 	[/staffGradeInputContainer.do/,function () {
+            /*
 	    addToOptionBar(
 		Button('CSV (Many Classes)',function () {
 		    log('Show import multi-grades UI');
@@ -1119,10 +1130,10 @@ function UserInterface () {
 			function (csvObj, doMap) { // the callback
 			    log('Got CSV Data: ',csvObj);
 			    var mytable = TableObject(getAssignmentsFromGradebook());
-			    mytable.showError = function (e) {
-				$popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
-				if (! $popin.out) {$popin.doToggle()}
-			    }
+			    // mytable.showError = function (e) {
+			    //     $popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
+			    //     if (! $popin.out) {$popin.doToggle()}
+			    // }
 			    var actions = []
 			    var $popin = makePopin();
 			    $('body').append($popin);
@@ -1168,11 +1179,12 @@ function UserInterface () {
 		    );
 		})
 	    );
+        */
 	}],
 
 	[/staffGradeInputContainer.do/,function () {
 	    addToOptionBar(
-		Button('Import Assignment Grades',function () {
+		Button('Import Grades from CSV',function () {
 		    log('Show import grades UI');
 		    var $popup = makePopup();
 	            var $input = $('<input type="file" id="csvFileInput" accept=".csv">');
@@ -1197,10 +1209,10 @@ function UserInterface () {
     function importGradesFromCsvCallback (csvObj, doMap) { // the callback
 	log('Got CSV Data: ',csvObj);
 	mytable = TableObject(getAssignmentsFromGradebook());
-	mytable.showError = function (e) {
-	    $popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
-	    if (! $popin.out) {$popin.doToggle()}
-	}
+	// mytable.showError = function (e) {
+	//     $popin.body.append($('<br><strong>'+'ERROR: '+e+'</strong>'));
+	//     if (! $popin.out) {$popin.doToggle()}
+	// }
 	actions = []
 	$popin = makePopin();
 	$('body').append($popin);
@@ -1569,9 +1581,10 @@ function UserInterface () {
                     _lastClass = obj.loadedClasses[checkedBoxes[0].value]
                 }
                 if (_lastClass) {
-                    GCIDs[getCurrentGradebookClass()] = _lastClass;
-                    log('Updated GCID=>',JSON.stringify(GCIDs));
-                    log('Save associaton: __=>__',getCurrentGradebookClass(),_lastClass);
+                    GCIDs[getCurrentGradebookClass()] = pruneCourseObject(_lastClass);
+                    console.log('Set association',getCurrentGradebookClass(),pruneCourseObject(_lastClass));
+                    //log('Updated GCID=>',JSON.stringify(GCIDs));
+                    log('Save associaton: __=>__',getCurrentGradebookClass(),pruneCourseObject(_lastClass));
                     prefs.set('GCID',GCIDs);
                 }
                 else {
@@ -1582,17 +1595,25 @@ function UserInterface () {
             getSelectedAssignments : function () {
                 return $('input[name="aa-google-assignment"]:checked').map(function () {return obj.loadedAssignments[this.value]}).get()
             },
-            getGradesForClass : function () {
-            },
             fetchClasses : fetchClasses,
             loadedClasses : false,
             loadedAssignments : false,
             loadedGrades : false,
         }
+        function pruneCourseObject (o) {
+            return {
+                name : o.name,
+                id : o.id,
+                description: o.description,
+                alternateLink : o.alternateLink,
+            }
+        }
+
         var $popup = makePopup();
         var $actionButton;
         var $waiting = $(`<div class="aa-loader-message"><h2>${header}</h2>
     <h3>Loading Classes from Google...</h3>
+    <progress></progress>
     <p>In just a second this will have something useful.
     </p></div>`);
         $popup.body.append($waiting);
@@ -1611,7 +1632,8 @@ function UserInterface () {
                 console.log('Weird -- no assignments');
             }
             $popup.body.empty();
-            $popup.body.append(`<div class="aa-loader-message"><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div>`);
+            $popup.body.append(`<div class="aa-loader-message"><h2>${header}</h2><h4>Loading</h4><p>Loading grades from google... this can take a sec</p></div><progress></progress>`);
+            $actionButton.hide();
             chrome.runtime.sendMessage(
                 {mode:'classroom',
                  method:'listSubmissions',
@@ -1756,7 +1778,10 @@ function UserInterface () {
         }
 
         function AssignmentPicker (data) {
-            var $picker = $('<div class="aa-picker"><h3>Pick Assignments to Load</h3></div>');
+            var $picker = $(`
+<div class="aa-picker">
+<h4>${obj.getSelectedClass().name} <a id="aa-change-course" href="#">(change class)</a></h4>
+<h3>Pick Assignments</h3></div>`);
             var $ul = $('<ul></ul>')
             $picker.append($ul);
             
@@ -1764,6 +1789,16 @@ function UserInterface () {
                 $ul.append($(`<li><input name="aa-google-assignment" type="checkbox" class="aa-google-assignment" value="${cw.id}">
                                <b><a href="${cw.alternateLink}">${cw.title}</a> </b>  Due ${cw.dueDate && cw.dueDate.month}/${cw.dueDate && cw.dueDate.day} ${cw.maxPoints}pts.
                                <br><small>(i.e. ${cw.aspenShort}: ${cw.aspenLong})</small></li>`));
+            });
+            $('body').on('click','#aa-change-course',function () {
+                console.log('They clicked change course');
+                var currentClass = getCurrentGradebookClass();
+                delete GCIDs[currentClass];
+                prefs.set('GCID',GCIDs);
+                console.log('Deleted association...');
+                window.alert(
+                    "Ok -- I have now forgotten the association. Close out of this process and restart to select a different class. Sorry I didn't make this UI slicker..."
+                );
             });
             return $picker;
         }
@@ -2247,7 +2282,10 @@ function Prefs (keys) {
             self.prefs[k] = v;
             chrome.storage.sync.set(setDic,
                                      ()=>{
-                                         console.log('Set __ in memory => __',k,setDic[k]);
+                                         console.log('Attempted to set',k,'=>',JSON.parse(setDic[k]));
+                                         if (chrome.runtime.lastError) {
+                                             console.log('Error?',chrome.runtime.lastError);
+                                         }
                                      });
         }
 
