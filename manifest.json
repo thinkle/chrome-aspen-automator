@@ -3,7 +3,7 @@
 
     "name": "Aspen Automator",
     "description": "This extension automates annoying parts of aspen",
-    "version": "1.0",
+    "version": "1.2",
 
     "browser_action": {
 	"default_icon": "icon.png",
@@ -31,7 +31,7 @@
     },
 
     "content_scripts" : [
-	{"matches":["https://*.myfollett.com/*"],
+	{"matches":["https://*.myfollett.com/*","https://*/aspen/*"],
 	 "css":["aspen.css"],
 	 "js":["jquery.js","jquery.csv.min.js","globals.js", "delayedDoer.js","aspen.js"],
 	 "all_frames":true
