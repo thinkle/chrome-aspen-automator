@@ -1272,7 +1272,7 @@ function UserInterface () {
 	obj.$buttonArea = $('<span class="aa-csv-data-handler-button-area">');
 	var mapper;
         
-        function handleEvent (d) {
+        function handleEvent (e) {
 	    var input = e.target.result;
             handleData(input);
         }
